@@ -19,6 +19,9 @@ User.init(
 			type: DataTypes.STRING,
 			allowNull: false,
 			unique: true,
+			validate: {
+				isEmail: true,
+			},
 		},
 		password: {
 			type: DataTypes.STRING,
@@ -27,6 +30,7 @@ User.init(
 		image: {
 			type: DataTypes.STRING,
 			unique: true,
+			//FALTA PONER RUTA DEFAULT A PERFIL SIN IMAGEN
 		},
 		address: {
 			type: DataTypes.STRING,
