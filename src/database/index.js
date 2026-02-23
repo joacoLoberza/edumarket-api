@@ -1,7 +1,6 @@
-import { Sequelize } from 'sequelize';
-import fs from 'fs';
-import path from 'path';
-import { Grade, Div, Level } from './models/School.js';
+import { v2 as cloudinary } from 'cloudinary';
+import { Grade, Div, Level } from './models/Course.js';
+import database from './database.js';
 import School from './models/School.js';
 import User from './models/User.js';
 import Product from './models/Product.js';
@@ -14,38 +13,6 @@ import Category from './models/Category.js';
 import CartItem from './models/CartItem.js';
 import Cart from './models/Cart.js';
 
-const database = new Sequelize(
-	process.env.DB_NAME,
-	process.env.DB_USER,
-	process.env.DB_PASSWORD,
-	{
-		host: process.env.DB_HOST,
-		port: 3306,
-		dialect: 'mysql',
-		logging: (msg) => {
-			const logDir = '/home/u917654584/domains/edumarketmendoza.com/logs';
-			if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-
-			const logFile = path.join(logDir, 'sequelize.log');
-			const timestamp = new Date().toISOString();
-			fs.appendFile(logFile, `[${timestamp}] ${msg}\n`, (error) => {
-				if (error) {console.log(`Server|\x1b[31m Error registering sequelize logs.\x1b[0m\n\nError Object:\n`, error)}
-			})
-		},
-		timezone: '-03:00',
-		pool: {
-			max: 5,
-			min: 0,
-			acquire: 45000,
-			idle: 100000,
-		},
-		define: {
-			timestamps: true,
-			freezeTableName: true,
-		},
-	}
-);
-
 export const createRealtionships = () => {
 	Grade.hasMany(Course, {
 		foreignKey: 'gradeFk',
@@ -56,37 +23,47 @@ export const createRealtionships = () => {
 
 	Div.hasMany(Course, {
 		foreignKey: 'divFk',
+		onDelete: 'CASCADE',
 	});
 	Course.belongsTo(Div, {
 		foreignKey: 'divFk',
+		onDelete: 'CASCADE',
 	});
 
 	Level.hasMany(Course, {
 		foreignKey: 'levelFk',
+		onDelete: 'CASCADE',
 	});
 	Course.belongsTo(Level, {
 		foreignKey: 'levelFk',
+		onDelete: 'CASCADE',
 	});
 
 	Course.hasMany(List, {
 		foreignKey: 'course',
+		onDelete: 'CASCADE',
 	});
 	List.belongsTo(Course, {
 		foreignKey: 'course',
+		onDelete: 'CASCADE',
 	});
 
 	School.hasMany(List, {
 		foreignKey: 'school',
+		onDelete: 'CASCADE',
 	});
 	List.belongsTo(School, {
 		foreignKey: 'school',
+		onDelete: 'CASCADE',
 	});
 
 	List.hasMany(ListItem, {
 		foreignKey: 'list',
+		onDelete: 'CASCADE',
 	});
 	ListItem.belongsTo(List, {
 		foreignKey: 'list',
+		onDelete: 'CASCADE',
 	});
 
 	Product.hasMany(ListItem, {
@@ -126,9 +103,11 @@ export const createRealtionships = () => {
 
 	Cart.hasMany(CartItem, {
 		foreignKey: 'cart',
+		onDelete: 'CASCADE',
 	});
 	CartItem.belongsTo(Cart, {
 		foreignKey: 'cart',
+		onDelete: 'CASCADE',
 	});
 
 	Category.hasMany(Product, {
@@ -162,10 +141,10 @@ export const createRealtionships = () => {
 
 export const syncDBConnection = async () => {
 	try {
-		console.log('\x1b[34m%s\x1b[0m', 'Node| Checking data base connection...');
+		console.log('\x1b[34m%s\x1b[0m%s', 'Node|', ' Checking data base connection...');
 		await database.authenticate();
 
-		console.log('\x1b[34m%s\x1b[0m', 'Node| Verifying if the models exists in the data base...')
+		console.log('\x1b[34m%s\x1b[0m%s', 'Node|', ' Verifying if the models exists in the data base...')
 		await database.sync().then(async () => {
 			await Grade.bulkCreate([
 				{ number: 1 },
@@ -192,7 +171,7 @@ export const syncDBConnection = async () => {
 	} catch (error) {
 		switch (error.name) {
 			case 'SequelizeConnectionRefusedError':
-				console.error('\x1b[34m%s \x1b[31m%s', 'Node| ', `Couldn't connect whit MySQL service.`);
+				console.error('\x1b[34m%s \x1b[31m%s\x1b[0m', 'Node| ', `Couldn't connect whit MySQL service.`);
 				break;
 			case 'SequelizeAccessDeniedError':
 				console.error('\x1b[34m%s \x1b[31m%s\x1b[0m', 'Node| ', 'Data base access denied, invalid credentials.')
@@ -209,4 +188,10 @@ export const syncDBConnection = async () => {
 	}
 };
 
-export default database;
+export const cloudinaryConnection = async () => {
+	cloudinary.config({
+		cloud_name: process.env.CL_NAME,
+		api_key: process.env.CL_KEY,
+		api_secret: process.env.CL_SECRET,
+	})
+}

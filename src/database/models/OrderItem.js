@@ -1,8 +1,9 @@
-import database from '../index.js';
-import { Model, DataTypes } from 'sequelize';
+import database from '../database.js';
+import { Model, DataTypes, json } from 'sequelize';
 import Product from './Product.js';
 import Order from './Order.js';
 import List from './List.js';
+import ServerError from '../../utils/ServerError.js';
 
 class OrderItem extends Model { };
 OrderItem.init(
@@ -19,7 +20,16 @@ OrderItem.init(
 				key: 'id',
 			},
 			validate: {
-				min: 1,
+				min: {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new category, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
 			},
 		},
 		list: {
@@ -29,7 +39,16 @@ OrderItem.init(
 				key: 'id',
 			},
 			validate: {
-				min: 1,
+				min: {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new category, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
 			},
 		},
 		order: {
@@ -39,14 +58,26 @@ OrderItem.init(
 				key: 'id',
 			},
 			validate: {
-				min: 1,
+				min: {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new category, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
 			}
 		},
 		amount: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
 			validate: {
-				min: 1,
+				min: {
+					args: [1],
+					msg: 'No se puede crear un item en la orden con una cantidad de elementos negativa.',
+				},
 			},
 		}
 	},

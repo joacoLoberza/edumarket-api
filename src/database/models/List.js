@@ -1,8 +1,9 @@
-import database from '../index.js';
+import database from '../database.js';
 import { Model, DataTypes } from 'sequelize';
 import School from './School.js';
 import Course from './Course.js';
 import User from './User.js';
+import ServerError from '../../utils/ServerError.js';
 
 class List extends Model { };
 List.init(
@@ -22,7 +23,16 @@ List.init(
 				key: 'id',
 			},
 			validate: {
-				min: 1,
+				min: {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new list, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
 			},
 		},
 		course: {
@@ -32,7 +42,16 @@ List.init(
 				key: 'id',
 			},
 			validate: {
-				min: 1,
+				min:  {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new list, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
 			},
 		},
 		user: {

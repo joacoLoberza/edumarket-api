@@ -1,7 +1,8 @@
-import database from '../index.js';
+import database from '../database.js';
 import { Model, DataTypes } from 'sequelize';
 import Product from './Product.js';
 import Cart from './Cart.js';
+import ServerError from '../../utils/ServerError.js';
 
 class CartItem extends Model { };
 CartItem.init(
@@ -19,7 +20,16 @@ CartItem.init(
 				key: 'id',
 			},
 			validate: {
-				min: 1,
+				min:  {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new cart item, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
 			},
 		},
 		cart: {
@@ -30,14 +40,26 @@ CartItem.init(
 				key: 'id',
 			},
 			validate: {
-				min: 1,
+				min: {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new cart item, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
 			},
 		},
 		amount: {
 			type: DataTypes.INTEGER,
 			defaultValue: 1,
 			validate: {
-				min: 1,
+				min: {
+					args: [1],
+					msg: 'No se puede ingresar una cantidad negativa de elementos.',
+				},
 			},
 		},
 	}, { sequelize: database }

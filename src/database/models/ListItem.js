@@ -1,4 +1,4 @@
-import database from '../index.js';
+import database from '../database.js';
 import { Model, DataTypes } from 'sequelize';
 import Product from './Product.js';
 import List from './List.js';

@@ -1,4 +1,4 @@
-import database from '../index.js';
+import database from '../database.js';
 import { Model, DataTypes } from 'sequelize';
 
 class Category extends Model { };
@@ -14,7 +14,9 @@ Category.init(
 			unique: true,
 			allowNull: true,
 			validate: {
-				isAlphanumeric: true,
+				isAlphanumeric: {
+					msg: 'El nombre de la categoría deber ser alfanumérico.',
+				},
 			},
 		},
 	}, { sequelize: database }

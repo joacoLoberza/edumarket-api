@@ -1,49 +1,6 @@
-import database from '../index.js';
-import { Model, DataTypes, DATE } from 'sequelize';
-
-class Course extends Model { };
-Course.init(
-	{
-		id: {
-			primaryKey: true,
-			type: DataTypes.INTEGER,
-			autoIncrement: true,
-		},
-		gradeFk: {
-			type: DataTypes.INTEGER,
-			allowNull: false,
-			references: {
-				model: Grade,
-				key: 'id',
-			},
-			validate: {
-				min: 1,
-			},
-		},
-		divFk: {
-			type: DataTypes.INTEGER,
-			allowNull: true,
-			references: {
-				model: Div,
-				key: 'id',
-			},
-			validate: {
-				min: 1,
-			},
-		},
-		levelFk: {
-			type: DataTypes.INTEGER,
-			allowNull: false,
-			references: {
-				model: Level,
-				key: 'id',
-			},
-			validate: {
-				min: 1,
-			},
-		},
-	}, { sequelize: database }
-);
+import ServerError from '../../utils/ServerError.js';
+import database from '../database.js';
+import { Model, DataTypes } from 'sequelize';
 
 export class Grade extends Model { };
 Grade.init(
@@ -58,8 +15,14 @@ Grade.init(
 			unique: true,
 			allowNull: false,
 			validate: {
-				min: 1,
-				max: 7,
+				min: {
+					args: [1],
+					msg: 'No se puede ingresar un grado de curso menor a 1.'
+				},
+				max: {
+					args: [7],
+					msg: 'No se puede ingresar un grado de curso mayor a 7.'
+				},
 			}
 		},
 	}, { sequelize: database }
@@ -78,7 +41,10 @@ Div.init(
 			unique: true,
 			allowNull: false,
 			validate: {
-				is: /^[A-Za-z-]+$/,
+				is: {
+					args: /^[A-Za-z-]+$/,
+					msg: 'Solo se admiten letras del abecedario o -.',
+				},
 			},
 		},
 	}, { sequelize: database }
@@ -97,6 +63,94 @@ Level.init(
 			unique: true,
 			allowNull: false,
 		},
+	}, { sequelize: database }
+);
+
+class Course extends Model { };
+Course.init(
+	{
+		id: {
+			primaryKey: true,
+			type: DataTypes.INTEGER,
+			autoIncrement: true,
+		},
+		gradeFk: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			references: {
+				model: Grade,
+				key: 'id',
+			},
+			validate: {
+				min: {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new course, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
+			},
+		},
+		divFk: {
+			type: DataTypes.INTEGER,
+			allowNull: true,
+			references: {
+				model: Div,
+				key: 'id',
+			},
+			validate: {
+				min: {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new course, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
+			},
+		},
+		levelFk: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			references: {
+				model: Level,
+				key: 'id',
+			},
+			validate: {
+				min: {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new course, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
+			},
+		},
+		checkSum: {
+			type: DataTypes.INTEGER,
+			allowNull: false,
+			unique: true,
+			validate: {
+				min: {
+					args: [3],
+					msg: JSON.stringify(new ServerError(
+						`Invalid course.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					)),
+				}
+			}
+		}
 	}, { sequelize: database }
 );
 

@@ -1,5 +1,6 @@
-import database from '../index.js';
+import database from '../database.js';
 import { Model, DataTypes } from 'sequelize';
+import ServerError from '../../utils/ServerError.js';
 import Category from './Category.js';
 
 class Product extends Model { };
@@ -18,27 +19,39 @@ Product.init(
 			type: DataTypes.INTEGER,
 			defaultValue: 0,
 			validate:{
-				min: 0,
+				min: {
+					args: [0],
+					msg: 'El stock no puede ser un número negativo.',
+				},
 			},
 		},
 		basePrice: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
 			validate: {
-				min: 0,
+				min: {
+					args: [0],
+					msg: 'El precio base del producto no puede ser negativo.',
+				},
 			},
 		},
 		offerPrice: {
 			type: DataTypes.INTEGER,
 			validate: {
-				min: 0,
+				min: {
+					args: [0],
+					msg: 'El precio de oferta no puede ser un número negativo',
+				},
 			}
 		},
 		description: {
 			type: DataTypes.TEXT,
 			defaultValue: 'Este producto no cuenta con una descripción.',
 			validate: {
-				len: [0, 500],
+				len: {
+					args: [0, 500],
+					msg: 'La descripción del producto supera los 500 carácteres.',
+				},
 			},
 		},
 		category: {
@@ -49,12 +62,22 @@ Product.init(
 				key: 'id',
 			},
 			validate: {
-				min: 1,
+				min: {
+					args: [1],
+					msg: JSON.stringify(new ServerError(
+						`Can't create a new category, invalid PK entered in the DB.`,
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				},
 			},
 		},
 		image: {
 			type: DataTypes.STRING,
 			unique: true,
+			//FALTA PONER URL DEFAULT PARA IMÁGEN DEL PRODUCTO
 		}
 	}, { sequelize: database }
 );

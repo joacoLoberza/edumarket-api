@@ -1,5 +1,4 @@
-import { text } from 'express';
-import database from '../index.js';
+import database from '../database.js';
 import { Model, DataTypes } from 'sequelize';
 
 class School extends Model { };
@@ -19,7 +18,9 @@ School.init(
 			allowNull: false,
 			unique: true,
 			validate: {
-				isAlpha: true,
+				isAlpha: {
+					msg: 'Numero CUE invalido.'
+				},
 				checkFigures() {
 					const total = 0;
 					for (const figure of this.cue) {
