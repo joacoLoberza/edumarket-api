@@ -4,7 +4,7 @@ import User from '../../database/models/User.js';
 
 const clearUnverified = async () => {
 	await User.destroy({
-		where: { verified: false, ttl: {[Op.and]: {[Op.lte]: Date.now() / 1000}, [Op.gt]: 1} }
+		where: { verified: false, ttl: {[Op.and]: {[Op.lte]: Date.now() / 1000}, [Op.gt]: 0}, noDestroy: false }
 	})
 }
 

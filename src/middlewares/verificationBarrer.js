@@ -15,6 +15,8 @@ const verificationBarrer = async (req, res, next) => {
 				}
 			).toFlatObject());
 		}
+
+		next();
 	} catch (error) {
 		if (error.name) {
 			switch (error.name) {

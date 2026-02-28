@@ -8,6 +8,7 @@ import clearRevokedJWT from '../utils/cronJobs/clearRevokedJWT.js';
 import startStreaming from '../utils/bufferStreamCloudinary.js';
 import clearUnverified from '../utils/cronJobs/clearUnverified.js';
 import transporter from '../utils/mailTrans.js';
+import sequelizeErrorManagement from '../utils/sequelizeErrorManagement.js';
 import User from '../database/models/User.js';
 import Cart from '../database/models/Cart.js';
 import RevokedSession from '../database/models/RevokedSession.js';
@@ -72,6 +73,17 @@ export const userLogin = async (req, res) => {
 			return res.status(404).json( srvErr.toFlatObject() );
 		}
 
+		//Validate if the user is verified.
+		if (!user.verified) {
+			return res.status(403).json(new ServerError(
+				"This account isn't verified.",
+				{
+					origin: "server",
+					type: "PermissionDenied"
+				}
+			).toFlatObject());
+		}
+
 		//Validate user's password.
 		const validPass = await bcrypt.compare(password, user.password);
 
@@ -111,17 +123,7 @@ export const userLogin = async (req, res) => {
 
 	} catch (error) {
 		if (error.name) {
-			switch (error.name) {
-				case 'SequelizeTimeoutError':
-					const srvErr = new ServerError(
-						"Database is overloaded; unable to complete the controller's operation.",
-						{
-							type: 'Overloaded',
-							origin: 'sequelize',
-						}
-					)
-					return res.status(503).json( srvErr.toFlatObject() );
-			}
+			sequelizeErrorManagement(req, res, error)
 		}
 		const srvErr = new ServerError(
 			'Unknown error creating the session.',
@@ -149,95 +151,76 @@ export const userLogout = async (req, res) => {
 		});
 	} catch (error) {
 		if (error.name) {
-			let srvErr = null;
-			switch (error.name) {
-				case 'SequelizeValidationError':
-					return res.status(500).json(JSON.parse(error.errors[0].original));
-				case 'SequelizeUniqueConstraintError':
-					let reviewTrys = 1;
-					let solved = false;
+			sequelizeErrorManagement(req, res, error, [
+				{
+					name: 'UniqueConstraint',
+					callback: async (req, res, error) => {
+						let reviewTrys = 1;
+						let solved = false;
 
-					while (reviewTrys <= 3 && !solved) {
-						try {
-							const clonedExp = await RevokedSession.findOne({
-								attributes: ['exp'],
-								where: {
-									uuid: jti,
-								}
-							})
-							if (clonedExp.exp === exp) {
-								const srvErr = new ServerError(
-									`This account has been loged out before.`,
-									{
-										origin: 'sequelize',
-										type: 'UniqueDataRepeated',
+						while (reviewTrys <= 3 && !solved) {
+							try {
+								const clonedExp = await RevokedSession.findOne({
+									attributes: ['exp'],
+									where: {
+										uuid: jti,
 									}
-								);
-								return res.status(409).json(srvErr.toFlatObject());
-							} else {
-								exp = Math.max(clonedExp.exp, exp);
-								const newRegister = await RevokedSession.update(
-									{
-										exp,
-									},
-									{
-										where: {
-											uuid: jti,
+								})
+								if (clonedExp.exp === exp) {
+									return res.status(409).json( new ServerError(
+										`This account has been loged out before.`,
+										{
+											origin: 'sequelize',
+											type: 'UniqueDataRepeated',
+										}
+									).toFlatObject());
+								} else {
+									exp = Math.max(clonedExp.exp, exp);
+									const newRegister = await RevokedSession.update(
+										{
+											exp,
 										},
-									}
-								);
-								const srvErr = new ServerError(
-									`Extremely unusual error, the session's UUID is cloned. For security reasons, the expiration date has been modified to the latest date.`,
-									{
-										origin: 'sequelize',
-										type: 'UniqueDataRepeated',
-									}
-								);
-								return res.status(500).json(srvErr.toFlatObject());
+										{
+											where: {
+												uuid: jti,
+											},
+										}
+									);
+					
+									return res.status(500).json( new ServerError(
+										`Extremely unusual error, the session's UUID is cloned. For security reasons, the expiration date has been modified to the latest date.`,
+										{
+											origin: 'sequelize',
+											type: 'UniqueDataRepeated',
+										}
+									).toFlatObject());
+								}
+								solved = true;
+							} catch (error) {
+								reviewTrys += 1;
 							}
-							solved = true;
-						} catch (error) {
-							reviewTrys += 1;
+						}
+						if (reviewTrys > 3 && !solved) {
+							return res.status(500).json(  new ServerError(
+								`The session's UUID is alerdy revoked for unknown reasons.`,
+								{
+									origin: 'sequelize',
+									type: 'InvalidDataSent',
+								}
+							).toFlatObject() ); 
 						}
 					}
-					if (reviewTrys > 3 && !solved) {
-						const srvErr = new ServerError(
-							`The session's UUID is alerdy revoked for unknown reasons.`,
-							{
-								origin: 'sequelize',
-								type: 'InvalidDataSent',
-							}
-						);
-						return res.status(500).json( srvErr.toFlatObject() ); 
-					}
-				case 'SequelizeTimeoutError':
-					srvErr = new ServerError(
-						"Database is overloaded; unable to complete the controller's operation.",
-						{
-							origin: 'sequelize',
-							type: 'Overloaded',
-						}
-					);
-					return res.status(503).json( srvErr.toFlatObject() );
-				default:
-					srvErr = new ServerError (
-						`Unknown database error closing the session.`,
-						{
-							origin: 'sequelize',
-							type: 'Unknown'
-						}
-					);
-					return res.status(500).json( srvErr.toFlatObject() )
-			}
+				}
+			]);
 		}
-		const srvErr = new ServerError(
+
+		return res.status(500).json( new ServerError(
 			`Unknown error closing the session.`,
 			{
 				origin: 'unknown',
 				type: 'Unknown',
 			}
-		);
-		return res.status(500).json( srvErr.toFlatObject() );
+		).toFlatObject() );
 	}
 }
 
@@ -251,7 +234,16 @@ export const userRegister = async (req, res) => {
 		password: STR -> User password.
 		address: STR -> Home address from the user. (OPTIONAL)
 	}
-	
+	switch (error.name) {
+				case 'SequelizeTimeoutError':
+					return res.status(503).json( new ServerError(
+						"The database is overloaded, the server can't response.",
+						{
+							origin: 'sequelize',
+							type: 'Overloaded',
+						}
+					).toFlatObject());
+			}
 	Expected file:
 		[
 			{
@@ -267,7 +259,7 @@ export const userRegister = async (req, res) => {
 		let user = null;
 
 		//Verify necesary fields.
-		if ( !email || !password ) {
+		if ( !email.trim() || !password.trim() ) {
 			const srvErr = new ServerError(
 				'Missing necesary fields to register a new account.',
 				{
@@ -325,18 +317,18 @@ export const userRegister = async (req, res) => {
 			address,
 			role,
 			image,
-			ttl: 1,
+			noDestroy: true,
 		});
 
 		const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, { expiresIn:'10m' });
 		const url = `${process.env.CLIENT_URL}/user/verification?token=${token}`;
 		const { exp } = jwt.decode(token);
-		await newUser.update({ ttl: exp });
+		await newUser.update({ ttl: exp, noDestroy: false});
 
 		//Schedule clearing of the account if it's expired and unverificated.
 		setTimeout(async () => {
 			try {
-				await User.destroy({ where: { verified: false, id: newUser.id }, force: true });
+				await User.destroy({ where: { verified: false, id: newUser.id, noDestroy: false }, force: true });
 			} catch (error) {
 				if (error.name) {
 					switch (error.name) {
@@ -373,51 +365,7 @@ export const userRegister = async (req, res) => {
 			);
 			return res.status(500).json( srvErr.toFlatObject() );
 		} else if (error.name) {
-			let srvErr = null;
-			switch (error.name) {
-				case 'SequelizeValidationError':
-					try {
-						console.log(error.errors[0].original)
-						const srvErr = error.errors[0].original;
-						if (srvErr instanceof ServerError) {return res.status(422).json(srvErr.toFlatObject())} else throw error; 
-					} catch (error) {
-						srvErr = new ServerError(
-							`Can't add a new user in DB, there is a vlidation error.`,
-							{
-								origin: 'sequelize',
-								type: 'InvalidDataSent',
-								uiMessage: error.errors[0].message,
-							}
-						);
-						return res.status(422).json( srvErr.toFlatObject() );
-					}
-				case 'SequelizeUniqueConstraintError':
-					srvErr = new ServerError(
-						`There is a repeated field, can't create a new user in the DB.`,
-						{
-							origin: 'sequelize',
-							type: 'UniqueDataRepeated',
-						}
-					);
-					return res.status(409).json( srvErr.toFlatObject() );
-				case 'SequelizeTimeoutError':
-					srvErr = new ServerError(
-						"Database is overloaded; unable to complete the controller's operation.",
-						{
-							type:'Overloaded',
-							origin: 'sequelize',
-						}
-					);
-					return res.status(503).json( srvErr.toFlatObject() )
-				default:
-					srvErr = new ServerError(
-						`Unknown database error.`,
-						{
-							type:'Unknown',
-							origin: 'sequelize',
-						}
-					);
-			}
+			sequelizeErrorManagement(req, res, error)
 		}
 		return res.status(500).json(srvErr = new ServerError(
 			`Unknown register error.`,
@@ -439,6 +387,7 @@ Expected body:
 	try {
 		//Search token.
 		const { token } = req.body;
+		let response = {};
 		
 		if (!token) {
 			res.status(400).json( new ServerError(
@@ -483,7 +432,7 @@ Expected body:
 		}
 
 		//In case of be a account in register proccess.
-		if (user.ttl !== 1) {
+		if (!user.noDestroy) {
 			//Create a cart.
 			const newCart = await Cart.create({
 				user: readToken.id,
@@ -502,40 +451,26 @@ Expected body:
 				}
 			);
 			//Make a response.
-			res.json({
-				message: "Account verified successfully.",
-				token: sessionToken,
-				user: {
-					id: user.id,
-					name: user.name,
-					image: user.image
-				}
-			});
-		} else {
-			res.json({
-				message: "Account verified successfuly."
-			})
+			response.token = sessionToken;
+			response.user = {
+				id: user.id,
+				name: user.name,
+				image: user.image
+			};
 		}
 
 		//Verificate the user account.
-		await user.update({ verified: true, ttl:null});
+		await user.update({ verified: true, ttl:null, noDestroy: false});
 
-		return res.status(200);
+		//Make a response.
+		response.message = "Account verified successfuly.";
+
+		return res.status(200).json(response);
 
 	} catch(error) {
 		if (error.name) {
-			switch (error.name) {
-				case 'SequelizeTimeoutError':
-					return res.status(503).json( new ServerError(
-						"Database is overloaded of querys.",
-						{
-							origin: 'sequelize',
-							type: 'Overloaded',
-						}
-					).toFlatObject());
-			}
+			sequelizeErrorManagement(req, res, error) 
 		}
-		console.log(error)
 		return res.status(500).json( new ServerError(
 			"Couldn't verificate the account.",
 			{
@@ -599,28 +534,7 @@ export const userDelete = async (req, res) => {
 		});
 	} catch(error) {
 		if (error.name) {
-			let srvErr = null;
-			switch (error.name) {
-				case 'SequelizeTimeoutError':
-					srvErr = new ServerError(
-						"Database is overloaded; unable to complete the controller's operation.",
-						{
-							origin: 'sequelize',
-							type: 'Overloaded',
-						}
-					);
-					return res.status(503).json( srvErr.toFlatObject() );
-				default:
-					console.log(error)
-					srvErr = new ServerError (
-						`Unknown database error deleting the user.`,
-						{
-							origin: 'sequelize',
-							type: 'Unknown'
-						}
-					);
-					return res.status(500).json( srvErr.toFlatObject() )
-			}
+			sequelizeErrorManagement(req, res, error);
 		} else if (error.error.message) {
 			return res.status(500).json( new ServerError(
 				`Couldn't delete user's account.`,
@@ -687,7 +601,7 @@ export const recoverRequest = async (req, res) => {
 
 		if (!userDeleted) {
 			return res.status(404).json( new ServerError(
-				`The user to recover wasn't found.`,
+				`Error searching the user.`,
 				{
 					origin: 'server',
 					type: 'ResourceNotFound',
@@ -724,25 +638,7 @@ export const recoverRequest = async (req, res) => {
 
 	} catch(error) {
 		if (error.name) {
-			console.log('Debería estar acá.')
-			switch (error.name) {
-				case 'SequelizeTimeoutError':
-					return res.status(503).json( new ServerError(
-						`Database is overloaded; unable to complete the controller's operation.`,
-						{
-							origin: 'sequelize',
-							type: 'Overloaded',
-						}
-					).toFlatObject() );
-			}
-		} else {
-			return res.status(500).json( new ServerError(
-				`Error sending the mail for recover the account.`,
-				{
-					origin: 'nodemailer',
-					type: 'Unknown',
-				}
-			).toFlatObject());
+			sequelizeErrorManagement(req, res, error);
 		}
 		return res.status(500).json( new ServerError(
 			`Error recovering the account.`,
@@ -759,7 +655,6 @@ export const recoverAccount = async (req, res) => {
 		const { token } = req.body;
 		let user = null;
 
-		console.log("\x1b[36m FLAG 1: Validar el campo del token.\x1b[0m");
 		//Validate required token field.
 		if (!token) {
 			return res.status(400).json( new ServerError(
@@ -771,13 +666,11 @@ export const recoverAccount = async (req, res) => {
 			).toFlatObject());
 		}
 
-		console.log("\x1b[36m FLAG 2: Leer el token.\x1b[0m");
 		//Read the recover token.
 		let readToken = null;
 		try {
 				readToken = jwt.verify(token, process.env.JWT_SECRET);
 		} catch (error) {
-			console.log(error)
 				const message = (error.name === 'TokenExpiredError') 
 						? 'The token is expired.' 
 						: (error.name === 'JsonWebTokenError') 
@@ -793,7 +686,6 @@ export const recoverAccount = async (req, res) => {
 				).toFlatObject());
 		}
 
-		console.log("\x1b[36m FLAG 3: Buscar el usuario a recuperar.\x1b[0m");
 		//Search user to recover.
 		const recoverUser = await User.findOne({
 			paranoid: false,
@@ -810,16 +702,13 @@ export const recoverAccount = async (req, res) => {
 			).toFlatObject());
 		}
 
-		console.log("\x1b[36m FLAG 4: Recuperar la cuenta.\x1b[0m");
 		//Recover the user's account.
 		await recoverUser.restore();
 
-		console.log("\x1b[36m FLAG 5: Restaurar campos importantes.\x1b[0m");
 		//Restore importantest fields.
 		try {
 			user = await createUserField()
 		} catch (error) {
-			console.log(error)
 			return res.status(500).json( new ServerError(
 				`Somethin went worng creating the user. Try again.`, 
 				{ origin: 'unknown', type:'Unknown' }
@@ -831,31 +720,12 @@ export const recoverAccount = async (req, res) => {
 			email: recoverUser.email.split('-')[1],
 		});
 
-		console.log("\x1b[36m FLAG 6: Enviar respuesta.\x1b[0m");
 		return res.status(200).json({
 			message: "The account was recovered successfuly.",
 		});
 	} catch(error) {
-		console.log(error)
 		if (error.name) {
-			switch (error.name) {
-				case 'SequelizeUniqueConstraintError':
-					return res.status(409).json( new ServerError(
-						`There is an account created whit the same e-mail, can't recover the account.`,
-						{
-							origin: 'sequelize',
-							type: 'UniqueDataRepeated',
-						}
-					).toFlatObject() );
-				case 'SequelizeTimeoutError':
-					return res.status(503).json( new ServerError(
-						"Database is overloaded; unable to complete the controller's operation.",
-						{
-							origin: 'sequelize',
-							type: 'Overloaded',
-						}
-					).toFlatObject() );
-			}
+			sequelizeErrorManagement(req, res, error);
 		}
 		return res.status(500).json( new ServerError(
 			`Couldn't recover the account.`,
@@ -893,7 +763,8 @@ export const userUpdate = async (req, res) => {
 		const { toUser, newName, newDni, newEmail, oldPassword, newPassword, newRole, newAddress, newVerification } = req.body;
 		const buffer = req.file? req.file.buffer : null;		
 		const { role } = req.payload;
-		const id = null;
+		let id = null;
+		let response = {};
 
 		if (role === 'admin') {
 			//Verify id.
@@ -931,7 +802,7 @@ export const userUpdate = async (req, res) => {
 		if (!toUser) {
 			//The fields in this scope wouldn't be cahnged by someone other than the own user.
 			if (newPassword) {
-				correctPass = await bcrypt.compare(oldPassword, user.password);
+				const correctPass = await bcrypt.compare(oldPassword, user.password);
 				if (correctPass) user.password = newPassword;
 			}
 			if (newAddress) user.address = newAddress;
@@ -942,22 +813,25 @@ export const userUpdate = async (req, res) => {
 				await user.update({ image: newImage });
 			}
 		}
+		//The fields below could be changed by other user than own.
+		if (newVerification && toUser) user.verified = newVerification;
 		if (newName) user.name = newName;
 		if (newDni) {
-			const token = jwt.sign({ id: user.id, role: user.role, adminId: req.payload.id, newDni }, process.env.JWT_SECRET, { expiresIn: '10d' });
+			const token = jwt.sign({ id: user.id, adminId: req.payload.id, newDni }, process.env.JWT_SECRET, { expiresIn: '10d' });
 			const url = `${process.env.CLIENT_URL}/user/verification?token=${token}`;
 			await transporter.sendMail({
 				from: process.env.MAIL_USER,
-				to: newEmail,
+				to: user.email,
 				subject: 'Registrate en edumarket :P',
 				html: `<div>Holap potatoe <a href=${url}>CLICK</a></div>`,
-			})
+			});
+			response.emailSent = true;
 		}
 		if (newEmail) {
-			//Set new e-mail, and unverify account until it's verified (seting ttl as 1, because y woudn't have to be deleted un the util clearUnverified).
+			//Set new e-mail, and unverify account until it's verified.
 			user.email = newEmail;
 			user.verified = false;
-			user.ttl = 1;
+			user.noDestroy = true;
 			const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, { expiresIn:'10m' });
 			const url = `${process.env.CLIENT_URL}/user/verification?token=${token}`;
 			await transporter.sendMail({
@@ -970,21 +844,10 @@ export const userUpdate = async (req, res) => {
 		if (newRole) user.role = newRole;
 
 		await user.save();
+		response.message = `The user data was updated.`;
 
-		return res.status(201).json({
-			message: `The user data was updated.`,
-			user: {
-				id: user.id,
-				user: user.user,
-				name: user.name,
-				email: user.email,
-				dni: user.dni,
-				image: user.image,
-				address: user.address,
-			}
-		})
+		return res.status(201).json( response )
 	} catch(error) {
-		console.log(error)
 		if (error?.origin === 'cloudinary') {
 			return res.status(200).json( new ServerError(
 				`The profile was updated exepting the image.`,
@@ -995,38 +858,7 @@ export const userUpdate = async (req, res) => {
 			).toFlatObject() );
 		}
 		if (error.name) {
-			switch (error.name) {
-				case 'SequelizeValidationError':
-					try {
-						const srvErr = error.errors[0].origin;
-						if (srvErr instanceof ServerError) {return res.status(422).json(srvErr.toFlatObject())} else throw error; 
-					} catch(error) {
-						return res.status(422).json( new ServerError(
-							`The data sent is invalid.`,
-							{
-								origin: 'sequelize',
-								type: 'InvalidDataSent',
-								uiMessage: error.errors[0].message,
-							}
-						).toFlatObject() );
-					}
-				case 'SequelizeUniqueConstraintError':
-					return res.status(409).json( new ServerError(
-						`There is a reapeated field.`,
-						{
-							origin: 'sequelize',
-							type: 'UniqueDataRepeated',
-						}
-					).toFlatObject() );
-				case 'SequelizeTimeoutError':
-					return res.status(503).json( new ServerError(
-						"Database is overloaded; unable to complete the controller's operation.",
-						{
-							origin: 'sequelize',
-							type: 'Overloaded',
-						}
-					).toFlatObject() );
-			}
+			sequelizeErrorManagement(req, res, error);
 		}
 		return res.status(500).json( new ServerError(
 			`Can't update user's profile.`,
@@ -1039,9 +871,26 @@ export const userUpdate = async (req, res) => {
 }
 
 export const dniUpdateConfrim = async (req, res) => {
+	/*
+	Expected body:
+	{
+		token: STR -> Confirmation token for change DNI.
+	}
+	*/
 	try {
 		const { token } = req.body;
-		const { id, role, adminId, newDni } = jwt.verify(token, process.env.JWT_SECRET);
+		const { id, adminId, newDni } = jwt.verify(token, process.env.JWT_SECRET);
+		const { id:validationId } = req.payload;
+
+		if (validationId !== id) {
+			return res.status(403).json( new ServerError(
+				"The id of the user that sent the request is diferent than the id of the user to update.",
+				{
+					origin: 'server',
+					type: 'PermissionDenied',
+				}
+			).toFlatObject());
+		}
 
 		//Search user to change.
 		const user  = await User.findByPk(id);
@@ -1058,7 +907,7 @@ export const dniUpdateConfrim = async (req, res) => {
 		//Add DNI to archived DNI.
 		const archivedDni = await OldDNI.create({
 			dni: user.dni,
-			roleAtArchiving: role,
+			roleAtArchiving: user.role,
 			archivedBy: adminId,
 			user: id,
 		});
@@ -1071,7 +920,115 @@ export const dniUpdateConfrim = async (req, res) => {
 		});
 	} catch (error) {
 		if (error.name) {
-
+			sequelizeErrorManagement(req, res, error);
 		}
+		return res.status(500).json( new ServerError(
+			"Error updating user's DNI.",
+			{
+				origin: 'server',
+				type: 'Unknown',
+			}
+		).toFlatObject() );
+	}
+}
+
+export const searchAllUsers = async (req, res) => {
+	/*
+	Expected query:
+		search -> Key world for filter. (OPTIONAL)
+		limit -> Pagination limit. (OPTIONAL)
+		cursor -> Pagination start. (OPTIONAL)
+		order -> Query order. (OPTIONAL)
+		verified -> Filter whit verified accounts (don't send this field if wan't to see all). (OPTIONAL)
+		role -> Filter whit user's role (don't send this if wan't to see all). (OPTIONAL)
+	*/
+	try {
+		const { search = '', limit = 10, cursor, order = 'ASC', verified, role } = req.query;
+		const escapedSearch = search.replace('%','\\%').replace('_', '\\_');
+
+		//Make query filter.
+		const queryFilter = {
+			//Search by name, dni or email.
+			[Op.or] : [
+				{name: {[Op.like]: `%${escapedSearch}%`, [Op.escape]: '\\'}},
+				{dni: {[Op.like]: `%${escapedSearch}%`, [Op.escape]: '\\'}},
+				{email: {[Op.like]: `%${escapedSearch}%`, [Op.escape]: '\\'}}
+			]
+		};
+
+		//If there is a cursor, query starting in cursor (else in the start / end of the table).
+		if (cursor) {
+				queryFilter.id = (order === 'ASC')? {[Op.gt]: cursor} : {[Op.lt]: cursor};
+		}
+
+		//If there is a verified or role query, fileter using it.
+		if (verified !== undefined) {
+			queryFilter.verified = (verified === 'true');
+		}
+
+		if (role !== undefined) {
+			queryFilter.role = role;
+		}
+
+		//Search users.
+		const users = await User.findAll({
+			where: queryFilter,
+			limit: parseInt(limit),
+			order: [['id', order]],
+			attributes: [
+				'id',
+				'user',
+				'name',
+				'dni',
+				'email',
+				'image',
+				'role',
+				'verified',
+			]
+		});
+
+		const nextCursor = users.length	> 0? users[users.length - 1].id : null;
+
+		res.status(200).json({
+			message: "Users found successfuly.",
+			users,
+			nextCursor,
+		})
+	} catch (error) {
+		if (error.name) {
+			sequelizeErrorManagement(req, res, error)
+		}
+		return res.status(500).json( new ServerError(
+			"Unknown server error.",
+			{
+				origin: 'unknown',
+				type: 'Unknown',
+			}
+		).toFlatObject());
+	}
+}
+
+export const getUserProfile = async (req, res) => {
+	try {
+		const { id } = req.payload;
+		const user = await User.findByPk(id, {
+			attributes: ['id', 'name', 'user', 'address', 'email', 'image', 'dni', 'verified', 'role']
+		});
+
+		return res.status(200).json({
+			message: "User data found successfuly.",
+			data: user,
+	  });
+	} catch (error) {
+		if (error.name) {
+			sequelizeErrorManagement(req, res, error)
+		}
+		return res.status(500).json( new ServerError(
+			"Error searching user data.",
+			{
+				origin: 'unknown',
+				type: 'Unknown',
+			}
+		).toFlatObject());
 	}
 }

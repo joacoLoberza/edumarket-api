@@ -43,13 +43,13 @@ User.init(
 			//FALTA PONER URL DEFAULT A PERFIL SIN IMAGEN
 			validate: {
 				isUrl: {
-					msg: JSON.stringify( new ServerError(
+					msg: JSON.stringify(new ServerError(
 						`The data provided isn't an url, can't reference the image in the database.`,
 						{
 							origin: 'sequelize',
 							type: 'InvalidDataSent',
 						}
-					).toFlatObject() ),
+					).toFlatObject()),
 				}
 			}
 		},
@@ -65,8 +65,12 @@ User.init(
 			type: DataTypes.BOOLEAN,
 			defaultValue: false,
 		},
-		ttl: { //Time to live when the user isn't verfied (if it's 1 it means that the account don't have to be deleted).
+		ttl: { //Time to live when the user isn't verfied.
 			type: DataTypes.INTEGER,
+		},
+		noDestroy: { //In case of accounts don't verified that doesn't got to be destroyed.
+			type: DataTypes.BOOLEAN,
+			defaultValue: false,
 		}
 	},
 	{
@@ -74,14 +78,14 @@ User.init(
 		paranoid: true,
 		validate: {
 			checkTtl() {
-				if (!this.verified && !this.ttl) {
-					throw new ServerError(
+				if (!this.verified && !this.ttl && !this.noDestroy) {
+					throw JSON.stringify(new ServerError(
 						"The ttl field is a required field.",
 						{
 							origin: "sequelize",
 							type: "InvalidDataSent",
 						}
-					);
+					).toFlatObject());
 				} 
 			}
 		}
