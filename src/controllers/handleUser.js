@@ -1082,7 +1082,7 @@ export const resendVerification = async (req, res) => {
 	/*
 	Expected body:
 	{
-		id: INT -> The user's id.
+		id: NUMBER -> The user's id.
 	}
 	*/
 	const { id } = req.body;
@@ -1120,7 +1120,7 @@ export const resendRecover = async (req, res) => {
 	/*
 	Expected body:
 	{
-		id: INT -> The user's id.
+		id: NUMBER -> The user's id.
 	}
 	*/
 	const { id } = req.body;
