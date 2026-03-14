@@ -25,6 +25,58 @@ const createUserField = async () => {
 	return user;
 }
 
+class SendEmail {
+	static transporter = transporter;
+
+	static async verification (dest, url) {
+		await this.transporter.sendMail({
+			from: `Edumarket Soporte: <${process.env.MAIL_USER}>`,
+			to: dest,
+			subject: '📚 Corroborá tu e-mail en Edumarket.',
+			html: `
+				<div style="display: inline-block;">
+					<a href=${url} target="_blank" style="text-decoration:none; border:0;"><img src="https://res.cloudinary.com/dq1azghga/image/upload/v1773234937/verification_sejp9p.png" alt="Verificá tu cuenta" style="font-family: Arial, Helvetica, 'Liberation Sans', 'Nimbus Sans L', sans-serif; display: block; width: 75%; margin: 0 auto;"/></a>
+					<p style="font-size: 23px; text-align: center; font-family: Arial, Helvetica, sans-serif; color: #545454; width: 40%; display: block; margin: 0 auto;">Confirmanos que este es tu e-mail para asociarlo a tu cuenta de Edumarket.</p>
+					<button style="background-color: #ffc121; border-radius: 20px; height: 60px; padding: 10px 50px; border: none; margin: 40px auto; display: block;"><table cellspacing="0" cellpadding="0"><tr><td align="center" valign="center"><a href=${url} style="text-decoration: none; display: block; height: inherit; font-size: 21px; font-weight: 600; color: white;">Confirmar</a></td></tr></table></button>
+					<p style="text-align: center; font-family: Arial, Helvetica, sans-serif; font-weight: 600; color: #545454; font-size: 23px; display: block; margin: 0 auto;">¿No querías asociar esta dirección de correo?</p>
+					<p style="text-align: center; font-family:  Arial, Helvetica, sans-serif; color: #737373; font-size: 18px;">Ignorá este e-mail.</p>
+				</div>`,
+		});
+	}
+
+	static async recover (dest, url) {
+		await this.transporter.sendMail({
+			from: `Edumarket Soporte: <${process.env.MAIL_USER}>`,
+			to: dest,
+			subject: '⚡ Recuperá tu cuenta de Edumarket.',
+			html: `
+				<div style="display: inline-block;">
+					<a href=${url} target="_blank" style="text-decoration:none; border:0;"><img src="https://res.cloudinary.com/dq1azghga/image/upload/v1773412491/recover_bwy1te.png" alt="Verificá tu cuenta" style="font-family: Arial, Helvetica, 'Liberation Sans', 'Nimbus Sans L', sans-serif; display: block; width: 75%; margin: 0 auto;"/></a>
+					<p style="font-size: 23px; text-align: center; font-family: Arial, Helvetica, sans-serif; color: #545454; width: 40%; display: block; margin: 0 auto;">Nos solicitaron recuperar tu cuenta. Precioná el botón para confirmar que sos vos y volver con nosotros.</p>
+					<button style="background-color: #ffc121; border-radius: 20px; height: 60px; padding: 10px 50px; border: none; margin: 40px auto; display: block;"><table cellspacing="0" cellpadding="0"><tr><td align="center" valign="center"><a href=${url} style="text-decoration: none; display: block; height: inherit; font-size: 21px; font-weight: 600; color: white;">Recuperar Cuenta</a></td></tr></table></button>
+					<p style="text-align: center; font-family: Arial, Helvetica, sans-serif; font-weight: 600; color: #545454; font-size: 23px; display: block; margin: 0 auto;">¿No querías recuperar tu cuenta?</p>
+					<p style="text-align: center; font-family:  Arial, Helvetica, sans-serif; color: #737373; font-size: 18px;">Ignorá este e-mail.</p>
+				</div>`,
+		})
+	}
+
+	static async dniConfrim (dest, url, dni) {
+		await this.transporter.sendMail({
+			from: `Edumarket Soporte: <${process.env.MAIL_USER}>`,
+			to: dest,
+			subject: '🪪 Confirmanos tu DNI.',
+			html: `
+			<div style="display: inline-block;">
+				<a href=${url} target="_blank" style="text-decoration:none; border:0;"><img src="https://res.cloudinary.com/dq1azghga/image/upload/v1773412491/dni_o8rk3e.png" alt="Verificá tu cuenta" style="font-family: Arial, Helvetica, 'Liberation Sans', 'Nimbus Sans L', sans-serif; display: block; width: 75%; margin: 0 auto;"/></a>
+				<p style="font-size: 23px; text-align: center; font-family: Arial, Helvetica, sans-serif; color: #545454; width: 40%; display: block; margin: 0 auto;">Necesitamos tu confirmación para actualizar el DNI de tu cuenta a uno nuevo: <span style="font-weight: 600">${dni}</span>.</p>
+				<button style="background-color: #ffc121; border-radius: 20px; height: 60px; padding: 10px 50px; border: none; margin: 40px auto; display: block;"><table cellspacing="0" cellpadding="0"><tr><td align="center" valign="center"><a href=${url} style="text-decoration: none; display: block; height: inherit; font-size: 21px; font-weight: 600; color: white;">Confirmar DNI</a></td></tr></table></button>
+				<p style="text-align: center; font-family: Arial, Helvetica, sans-serif; font-weight: 600; color: #545454; font-size: 23px; display: block; margin: 0 auto;">¿No solicitaste cambiar tu DNI?</p>
+				<p style="text-align: center; font-family:  Arial, Helvetica, sans-serif; color: #737373; font-size: 18px;">Ignorá este e-mail.</p>
+			</div>`,
+		});
+	}
+}
+
 export const userLogin = async (req, res) => {
 	/*
 	Expected Body:
@@ -41,7 +93,7 @@ export const userLogin = async (req, res) => {
 		const { identifier, password } = req.body;
 
 		//Validate fields recived.
-		if (!identifier || !password) {
+		if (!identifier.trim() || !password.trim()) {
 			const srvErr = new ServerError(
 				'User or e-mail and password are required for sign in.',
 				{
@@ -122,8 +174,8 @@ export const userLogin = async (req, res) => {
 		})
 
 	} catch (error) {
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error)
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error)
 		}
 		const srvErr = new ServerError(
 			'Unknown error creating the session.',
@@ -150,8 +202,8 @@ export const userLogout = async (req, res) => {
 			message:'Logout done successfully.',
 		});
 	} catch (error) {
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error, [
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error, [
 				{
 					name: 'UniqueConstraint',
 					callback: async (req, res, error) => {
@@ -330,7 +382,7 @@ export const userRegister = async (req, res) => {
 			try {
 				await User.destroy({ where: { verified: false, id: newUser.id, noDestroy: false }, force: true });
 			} catch (error) {
-				if (error.name) {
+				if (error.name?.includes('Sequelize')) {
 					switch (error.name) {
 						case 'SequelizeTimeoutError':
 							console.error(`Server|\x1b[31m Error in database query \x1b[1mcleaning the expired unverified accounts\x1b[22m in its scheduled function, database overloaded.\x1b[0m`)
@@ -339,18 +391,15 @@ export const userRegister = async (req, res) => {
 					console.error(`Server|\x1b[31m Error \x1b[1mcleaning a expired unverified accounts\x1b[22m in its scheduled function.\x1b[0m`)
 				}
 			}
+			console.log('\x1b[36mELIMINADO\x1b[36m')
 		}, exp * 1000 - Date.now());
 
 		//Send verification e-mail to the user.
-		await transporter.sendMail({
-			from: process.env.MAIL_USER,
-			to: email,
-			subject: 'Registrate en edumarket :P',
-			html: `<div>Holap potatoe <a href=${url}>CLICK</a></div>`,
-		});
+		await SendEmail.verification(email, url);
 
 		return res.status(201).json({
 			message: `Successfuly register, an e-mail was sent to verify the account.`,
+			sentTo: newUser.id,
 		});
 	} catch (error) {
 		if (error?.origin === 'cloudinary') {
@@ -364,10 +413,10 @@ export const userRegister = async (req, res) => {
 				}
 			);
 			return res.status(500).json( srvErr.toFlatObject() );
-		} else if (error.name) {
-			sequelizeErrorManagement(req, res, error)
+		} else if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error)
 		}
-		return res.status(500).json(srvErr = new ServerError(
+		return res.status(500).json( new ServerError(
 			`Unknown register error.`,
 			{
 				type: 'Unknown',
@@ -405,7 +454,7 @@ Expected body:
 			readToken = jwt.verify(token, process.env.JWT_SECRET);
 		} catch(error) {
 			const message = (error.name === 'TokenExpiredError') ?
-				`The token is exired.` :
+				`The token is expired.` :
 				(error.name === 'JsonWebTokenError') ?
 					'The token is invalid.' :
 					'Unknown error whit the sent token.';
@@ -468,8 +517,8 @@ Expected body:
 		return res.status(200).json(response);
 
 	} catch(error) {
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error) 
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error) 
 		}
 		return res.status(500).json( new ServerError(
 			"Couldn't verificate the account.",
@@ -533,8 +582,8 @@ export const userDelete = async (req, res) => {
 			message: `The account has been deleted successfully,`
 		});
 	} catch(error) {
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error);
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error);
 		} else if (error.error.message) {
 			return res.status(500).json( new ServerError(
 				`Couldn't delete user's account.`,
@@ -568,7 +617,7 @@ export const recoverRequest = async (req, res) => {
 		const { dni, email, password } = req.body;
 
 		//Validate required fields.
-		if (!dni || !email || !password) {
+		if (!dni.trim() || !email.trim() || !password.trim()) {
 			return res.status(400).json( new ServerError(
 				`The dni and e-mail are required to do this operation.`,
 				{
@@ -625,20 +674,16 @@ export const recoverRequest = async (req, res) => {
 		const token = jwt.sign({id: userDeleted.id},process.env.JWT_SECRET,{ expiresIn: '10m'});
 		const url = `${process.env.CLIENT_URL}/user/recover?token=${token}`;
 
-		await transporter.sendMail({
-			from: `Edumarket Soporte: <${process.env.MAIL_USER}>`,
-			to: email,
-			subject: 'Recuperá tu cuenta en Edumarket',
-			html: `<div>Hello, i'm testing this. :D <a href=${url}>CLICK</a></div>`,
-		})
+		await SendEmail.recover(email, url);
 
 		return res.status(202).json({
 			message: `Confirmation e-mail sent corrctly.`,
+			sentTo: userDeleted.id,
 		})
 
 	} catch(error) {
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error);
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error);
 		}
 		return res.status(500).json( new ServerError(
 			`Error recovering the account.`,
@@ -724,8 +769,8 @@ export const recoverAccount = async (req, res) => {
 			message: "The account was recovered successfuly.",
 		});
 	} catch(error) {
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error);
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error);
 		}
 		return res.status(500).json( new ServerError(
 			`Couldn't recover the account.`,
@@ -749,6 +794,7 @@ export const userUpdate = async (req, res) => {
 		newPassword: STR -> User's new password. (OPTIONAL | WHIT oldPassword FIELD)
 		newRole: STR -> User's role (admin or client). (OPTIONAL | ONLY ADMIN)
 		newAddress: STR -> Home address from the user. (OPTIONAL)
+		newVerificarion: BOOLEAN -> The e-mail verification from the user. (OPTIONAL | ONLY ADMIN)
 	}
 	
 	Expected file:
@@ -797,7 +843,7 @@ export const userUpdate = async (req, res) => {
 				}
 			).toFlatObject() );
 		}
-
+		console.log(user.verified)
 		//Update user data.
 		if (!toUser) {
 			//The fields in this scope wouldn't be cahnged by someone other than the own user.
@@ -814,17 +860,20 @@ export const userUpdate = async (req, res) => {
 			}
 		}
 		//The fields below could be changed by other user than own.
-		if (newVerification && toUser) user.verified = newVerification;
+		if (newVerification !== undefined && newVerification !== null && toUser) {
+			if (!newVerification) {
+				user.verified = newVerification
+			} else {
+				const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn:'10m' });
+				const url = `${process.env.CLIENT_URL}/user/verification?token=${token}`;
+				await SendEmail.verification(user.email, url);
+			}
+		};
 		if (newName) user.name = newName;
 		if (newDni) {
 			const token = jwt.sign({ id: user.id, adminId: req.payload.id, newDni }, process.env.JWT_SECRET, { expiresIn: '10d' });
 			const url = `${process.env.CLIENT_URL}/user/verification?token=${token}`;
-			await transporter.sendMail({
-				from: process.env.MAIL_USER,
-				to: user.email,
-				subject: 'Registrate en edumarket :P',
-				html: `<div>Holap potatoe <a href=${url}>CLICK</a></div>`,
-			});
+			await SendEmail.dniConfrim(user.email, url, newDni);
 			response.emailSent = true;
 		}
 		if (newEmail) {
@@ -832,18 +881,14 @@ export const userUpdate = async (req, res) => {
 			user.email = newEmail;
 			user.verified = false;
 			user.noDestroy = true;
-			const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, { expiresIn:'10m' });
+			const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn:'10m' });
 			const url = `${process.env.CLIENT_URL}/user/verification?token=${token}`;
-			await transporter.sendMail({
-				from: process.env.MAIL_USER,
-				to: newEmail,
-				subject: 'Registrate en edumarket :P',
-				html: `<div>Holap potatoe <a href=${url}>CLICK</a></div>`,
-			})
+			await SendEmail.verification(newEmail, url);
 		};
 		if (newRole) user.role = newRole;
-
+		console.log(user.verified)
 		await user.save();
+		response.sentTo = user.id
 		response.message = `The user data was updated.`;
 
 		return res.status(201).json( response )
@@ -857,8 +902,8 @@ export const userUpdate = async (req, res) => {
 				}
 			).toFlatObject() );
 		}
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error);
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error);
 		}
 		return res.status(500).json( new ServerError(
 			`Can't update user's profile.`,
@@ -919,8 +964,8 @@ export const dniUpdateConfrim = async (req, res) => {
 			message: "The DNI has been updated successfuly.",
 		});
 	} catch (error) {
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error);
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error);
 		}
 		return res.status(500).json( new ServerError(
 			"Error updating user's DNI.",
@@ -995,8 +1040,8 @@ export const searchAllUsers = async (req, res) => {
 			nextCursor,
 		})
 	} catch (error) {
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error)
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error)
 		}
 		return res.status(500).json( new ServerError(
 			"Unknown server error.",
@@ -1020,11 +1065,87 @@ export const getUserProfile = async (req, res) => {
 			data: user,
 	  });
 	} catch (error) {
-		if (error.name) {
-			sequelizeErrorManagement(req, res, error)
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error)
 		}
 		return res.status(500).json( new ServerError(
 			"Error searching user data.",
+			{
+				origin: 'unknown',
+				type: 'Unknown',
+			}
+		).toFlatObject());
+	}
+}
+
+export const resendVerification = async (req, res) => {
+	/*
+	Expected body:
+	{
+		id: INT -> The user's id.
+	}
+	*/
+	const { id } = req.body;
+	try {
+		if (!id) return res.status(404).json( new ServerError("The id field is required.", { origin: 'server', type: 'MissingFields' }))
+		const user = await User.findByPk(id);
+
+		if (!user) {
+			return res.status(404).json( new ServerError("User field not found.", { origin: 'server', type:'ResourceNotFound' }))
+		}
+
+		const token = jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '10m' });
+		const url = `${process.env.CLIENT_URL}/user/verification?token=${token}`;
+		await SendEmail.verification(user.email, url);
+
+		return res.status(200).json({
+			message: "Verification email sent successfully.",
+		});
+
+	} catch (error) {
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error)
+		}
+		return res.status(500).json( new ServerError(
+			"Unknown server error.",
+			{
+				origin: 'unknown',
+				type: 'Unknown',
+			}
+		).toFlatObject());
+	}
+}
+
+export const resendRecover = async (req, res) => {
+	/*
+	Expected body:
+	{
+		id: INT -> The user's id.
+	}
+	*/
+	const { id } = req.body;
+
+	try {
+		if (!id) return res.status(404).json( new ServerError("The id field is required.", { origin: 'server', type: 'MissingFields' }))
+		const user = await User.findByPk(id);
+
+		if (!user) {
+			return res.status(404).json( new ServerError("User field not found.", { origin: 'server', type:'ResourceNotFound' }))
+		}
+
+		const token = jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '10m' });
+		const url = `${process.env.CLIENT_URL}/user/recover?token=${token}`;
+		await SendEmail.recover(user.email, url);
+
+		return res.status(200).json({
+			message: "Recovery email sent successfully.",
+		});
+	} catch (error) {
+		if (error.name?.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error)
+		}
+		return res.status(500).json( new ServerError(
+			"Unknown server error.",
 			{
 				origin: 'unknown',
 				type: 'Unknown',

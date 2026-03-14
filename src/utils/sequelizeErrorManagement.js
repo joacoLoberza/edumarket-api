@@ -1,25 +1,24 @@
-import { defaultMaxListeners } from "nodemailer/lib/xoauth2";
-import ServerError from "./ServerError";
+import ServerError from "./ServerError.js";
 
 const sequelizeErrorManagement = async (req, res, error, options) => {
 	/**
 	 * @param {import('express').Request} req
 	 * @param {import('express').Response} res
 	 * @param {import('sequelize').BaseError} error
-	 * @param {Array<{name: string, code: number, message: string, origin: string, callback: Function}>} options - The name is the type of Sequelize error, message is the message to show in the frontend console, and the callback is somthing to execute instead of the default code.
+	 * @param {Array<{name: string, code: number, message: string, type: string, callback: Function}>} options - The name is the type of Sequelize error, message is the message to show in the frontend console, and the callback is somthing to execute instead of the default code.
 	 */
-	const type = 'sequelize';
+	const origin = 'sequelize';
 	switch (error.name) {
 		case 'SequelizeValidationError':
-			const validation = options.find(option => option.name = 'Validation');
+			const validation = options?.find(option => option.name = 'Validation');
 
-			if (validation.callback) {
+			if (validation?.callback) {
 				await validation.callback(req, res, error)
 			} else {
 				const errMsg = error.errors[0]?.message;
-				const code = validation.code? validation.code : 422;
-				const message = validation.message? validation.message : "There are invalid fields in the request.";
-				const origin = validation.options.origin? validation.origin : 'InvalidDataSent';
+				const code = validation?.code? validation.code : 422;
+				const message = validation?.message? validation.message : "There are invalid fields in the request.";
+				const type = validation?.options?.type? validation.type : 'InvalidDataSent';
 		
 				try {
 					return res.status(code).json(JSON.parse(errMsg));
@@ -36,14 +35,14 @@ const sequelizeErrorManagement = async (req, res, error, options) => {
 			}
 			break;
 		case 'SequelizeUniqueConstraintError':
-			const uniqueConstraint = options.find(option => option.name = 'UniqueConstraint');
+			const uniqueConstraint = options?.find(option => option.name = 'UniqueConstraint');
 
-			if (uniqueConstraint.callback) {
+			if (uniqueConstraint?.callback) {
 				await uniqueConstraint.callback(req, res, error)
 			} else {
-				const code = uniqueConstraint.code? uniqueConstraint.code : 409;
-				const message = uniqueConstraint.message? uniqueConstraint.message : "There are fields that exeed the unique constraint.";
-				const origin = uniqueConstraint.options.origin? uniqueConstraint.origin : 'UniqueDataRepeated';
+				const code = uniqueConstraint?.code? uniqueConstraint.code : 409;
+				const message = uniqueConstraint?.message? uniqueConstraint.message : "There are fields that exeed the unique constraint.";
+				const type = uniqueConstraint?.options.type? uniqueConstraint.type : 'UniqueDataRepeated';
 
 				return res.status(code).json( new ServerError(
 					message,
@@ -55,14 +54,14 @@ const sequelizeErrorManagement = async (req, res, error, options) => {
 			}
 			break;
 		case 'SequelizeTimeoutError':
-			const timeout = options.find(option => option.name = 'Timeout');
+			const timeout = options?.find(option => option.name = 'Timeout');
 
-			if (timeout.callback) {
+			if (timeout?.callback) {
 				await timeout.callback(req, res, error)
 			} else {
-				const code = timeout.code? timeout.code : 503;
-				const message = timeout.message? timeout.message : "The database is overloaded, so the query cannot be procesed.";
-				const origin = timeout.options.origin? timeout.origin : 'Overloaded';
+				const code = timeout?.code? timeout.code : 503;
+				const message = timeout?.message? timeout.message : "The database is overloaded, so the query cannot be procesed.";
+				const type = timeout?.options?.type? timeout.type : 'Overloaded';
 
 				return res.status(code).json( new ServerError(
 					message,
@@ -74,14 +73,14 @@ const sequelizeErrorManagement = async (req, res, error, options) => {
 			}
 			break;
 		case 'SequelizeDatabeseError':
-			const queryError = options.find(option => option.name = 'Timeout');
+			const queryError = options?.find(option => option.name = 'Timeout');
 
-			if (queryError.callback) {
+			if (queryError?.callback) {
 				await queryError.callback(req, res, error)
 			} else {
-				const code = queryError.code? queryError.code : 500;
-				const message = queryError.message? queryError.message : "Cannot proceed whit the request, there are errors in the databae query.";
-				const origin = queryError.options.origin? queryError.origin : 'Query';
+				const code = queryError?.code? queryError.code : 500;
+				const message = queryError?.message? queryError.message : "Cannot proceed whit the request, there are errors in the databae query.";
+				const type = queryError?.options.type? queryError.type : 'Query';
 
 				return res.status(code).json( new ServerError(
 					message,

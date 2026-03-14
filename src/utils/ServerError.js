@@ -35,7 +35,7 @@ class ServerError {
 			'PermissionDenied',
 			'Query',
 		];
-
+		
 		this.origin = (allowedOrgins.includes(origin)) ? origin : `${origin}  \x1b[33;1m[!]\x1b[22m(This is not an expected origin in the server.)\x1b[0m`;
 		this.type = (allowedTypes.includes(type)) ? type : `${type}  \x1b[33;1m[!]\x1b[22m(This is not an expected type in the server.)\x1b[0m`;
 		this.message = String(message);
@@ -48,6 +48,7 @@ class ServerError {
 			origin: this.origin,
 			type: this.type,
 			message: this.message,
+			uiMessage: this.uiMessage
 		}
 	}
 }
