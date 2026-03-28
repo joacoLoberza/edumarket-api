@@ -286,22 +286,10 @@ export const userRegister = async (req, res) => {
 		password: STR -> User password.
 		address: STR -> Home address from the user. (OPTIONAL)
 	}
-	switch (error.name) {
-				case 'SequelizeTimeoutError':
-					return res.status(503).json( new ServerError(
-						"The database is overloaded, the server can't response.",
-						{
-							origin: 'sequelize',
-							type: 'Overloaded',
-						}
-					).toFlatObject());
-			}
 	Expected file:
-		[
-			{
-				buffer: STR -> User profile image buffer in the mserver's memory. (OPTIONAL)
-			}
-		] 
+		{
+			buffer: STR -> User profile image buffer in the server's memory. (OPTIONAL)
+		} 
 	 */
 	try {
 		const { dni, name, email, password, address } = req.body;
@@ -355,7 +343,7 @@ export const userRegister = async (req, res) => {
 		
 		//If there is a provided image, upload it and get the URL.
 		if ( buffer ) {
-			const result = await startStreaming(buffer, {dir: 'profileImages',format: 'webp',name: `${Date.now()}-${user}`,type: 'image'});
+			const result = await startStreaming(buffer, {dir: 'profileImages',name: `${Date.now()}-${user}`,type: 'image'});
 			if (result) image = result.secure_url;
 		}
 
@@ -412,7 +400,7 @@ export const userRegister = async (req, res) => {
 					origin: 'cloudinary',
 				}
 			);
-			return res.status(500).json( srvErr.toFlatObject() );
+			return res.status(502).json( srvErr.toFlatObject() );
 		} else if (error.name?.includes('Sequelize')) {
 			return await sequelizeErrorManagement(req, res, error)
 		}
@@ -548,7 +536,7 @@ export const userDelete = async (req, res) => {
 		}
 
 		//Delete profile image.
-		if (userToDelete.image) await cloudinary.uploader.destroy(`profileImages/${userToDelete.image.split('/').pop()}`, { resource_type: 'image' });
+		if (userToDelete.image && userToDelete.image !== process.env.DEF_PROF_IMG) await cloudinary.uploader.destroy(`profileImages/${userToDelete.image.split('/').pop()}`, { resource_type: 'image' });
 
 		//Delete user's cart.
 		const cart = await Cart.findOne({ where: { user: id } });
@@ -584,8 +572,8 @@ export const userDelete = async (req, res) => {
 	} catch(error) {
 		if (error.name?.includes('Sequelize')) {
 			return await sequelizeErrorManagement(req, res, error);
-		} else if (error.error.message) {
-			return res.status(500).json( new ServerError(
+		} else if (error?.error?.message) {
+			return res.status(502).json( new ServerError(
 				`Couldn't delete user's account.`,
 				{
 					origin: 'cloudinary',
@@ -853,8 +841,8 @@ export const userUpdate = async (req, res) => {
 			}
 			if (newAddress) user.address = newAddress;
 			if (buffer) {
-				await cloudinary.uploader.destroy(`profileImages/${user.image.split('/').pop()}`, { resource_type: 'image' });
-				const response = await startStreaming(buffer, {dir: 'profileImages', format: 'webp', name: `${Date.now()}-${user}`, type: 'image'});
+				if (user.image !== process.env.DEF_PROF_IMG) await cloudinary.uploader.destroy(`profileImages/${user.image.split('/').pop()}`, { resource_type: 'image' });
+				const response = await startStreaming(buffer, {dir: 'profileImages', name: `${Date.now()}-${user}`, type: 'image'});
 				const newImage = response.secure_url;
 				await user.update({ image: newImage });
 			}
@@ -1036,7 +1024,7 @@ export const searchAllUsers = async (req, res) => {
 
 		res.status(200).json({
 			message: "Users found successfuly.",
-			users,
+			users: users.map(user => user.toJSON()),
 			nextCursor,
 		})
 	} catch (error) {
@@ -1062,7 +1050,7 @@ export const getUserProfile = async (req, res) => {
 
 		return res.status(200).json({
 			message: "User data found successfuly.",
-			data: user,
+			data: user?.toJSON(),
 	  });
 	} catch (error) {
 		if (error.name?.includes('Sequelize')) {

@@ -5,6 +5,8 @@ import { createRealtionships, syncDBConnection, cloudinaryConnection } from './d
 import { clearRevokedSessionsCornJob } from './utils/cronJobs/clearRevokedJWT.js';
 import { clearUnverifiedCronJob } from './utils/cronJobs/clearUnverified.js';
 import usersRouter from './routers/userRouter.js';
+import cartRouter from './routers/cartRouter.js';
+import categoryRouter from './routers/categoryRouter.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,6 +16,8 @@ app.use(cors({
 	origin : process.env.CLIENT_URL || "http://localhost"
 }));
 app.use('/user', usersRouter);
+app.use('/cart', cartRouter);
+app.use('/category', categoryRouter);
 
 const startServer = async () => {
 	createRealtionships();

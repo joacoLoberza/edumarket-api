@@ -93,7 +93,7 @@ const sequelizeErrorManagement = async (req, res, error, options) => {
 			break;
 		default:
 			return res.status(500).json(  new ServerError (
-						`Unknown database error closing the session.`,
+						`Unknown database error.`,
 						{
 							origin: 'sequelize',
 							type: 'Unknown'

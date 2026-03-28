@@ -3,6 +3,7 @@ import { Model, DataTypes } from 'sequelize';
 import Product from './Product.js';
 import Cart from './Cart.js';
 import ServerError from '../../utils/ServerError.js';
+import List from './List.js';
 
 class CartItem extends Model { };
 CartItem.init(
@@ -14,7 +15,6 @@ CartItem.init(
 		},
 		product: {
 			type: DataTypes.INTEGER,
-			allowNull: false,
 			references: {
 				model: Product,
 				key: 'id',
@@ -31,6 +31,25 @@ CartItem.init(
 					).toFlatObject()),
 				},
 			},
+		},
+		list: {
+			type: DataTypes.INTEGER,
+			references: {
+				model: List,
+				key: 'id',
+			},
+			validate: {
+				min: {
+					args: [1],
+					msg: JSON.stringify( new ServerError(
+						"The foreign key of the list is invalid.",
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent',
+						}
+					).toFlatObject()),
+				}
+			}
 		},
 		cart: {
 			type: DataTypes.INTEGER,
@@ -62,7 +81,33 @@ CartItem.init(
 				},
 			},
 		},
-	}, { sequelize: database }
+	},
+	{
+		sequelize: database,
+		indexes: [
+			{
+				unique: true,
+				fields: ['product', 'cart'],
+			},
+			{
+				unique: true,
+				fields: ['list', 'cart']
+			}
+		],
+		validate: {
+			checkItemRef () {
+				if ((this.product && this.list) || (!this.product && !this.list)) {
+					throw JSON.stringify( new ServerError(
+						"Un item del carrito solo puede referenciar un producto o una lista.",
+						{
+							origin: 'sequelize',
+							type: 'InvalidDataSent'
+						}
+					).toFlatObject());
+				}
+			}
+		}
+	}
 );
 
 export default CartItem;

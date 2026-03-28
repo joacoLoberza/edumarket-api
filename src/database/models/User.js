@@ -40,7 +40,7 @@ User.init(
 		image: {
 			type: DataTypes.STRING,
 			unique: true,
-			//FALTA PONER URL DEFAULT A PERFIL SIN IMAGEN
+			defaultValue: process.env.DEF_PROF_IMG,
 			validate: {
 				isUrl: {
 					msg: JSON.stringify(new ServerError(

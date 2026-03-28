@@ -1,0 +1,1 @@
+1. Antes de eleminiar una imágen, validar que no se a la imágen por defecto cuando no hay imágen.

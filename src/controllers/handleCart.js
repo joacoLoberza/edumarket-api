@@ -1,9 +1,7 @@
-import { Op, where } from 'sequelize';
-import database from '../database/database.js';
 import CartItem from '../database/models/CartItem.js';
 import Product from '../database/models/Product.js';
 import Cart from '../database/models/Cart.js';
-import User from '../database/models/User.js';
+import List from '../database/models/List.js';
 import ServerError from '../utils/ServerError.js';
 import sequelizeErrorManagement from '../utils/sequelizeErrorManagement.js';
 
@@ -11,33 +9,51 @@ export const addItem = async (req, res) => {
 	/*
 	Expexted Body:
 	{
-		productId: NUMBER -> The ID of the product to add.
+		listId: NUMBER -> The ID of the list to add. | OPTIONAL when isn't productId
+		productId: NUMBER -> The ID of the product to add. | OPTIONAL when isn't listId 
 		amount: NUMBER -> The amount of products to add.
 	}
 	*/
 	try {
-		const { productId, amount = 1 } = req.body;
+		const { productId, listId, amount = 1 } = req.body;
 		const { id } = req.payload;
 
-		const product = await Product.findByPk(productId, { attributes: [] });
-		if (!product) {
-			return res.status(404).json( new ServerError(
-				"The product doesn't exists.",
-				{
-					origin: 'server',
-					type: 'ResourceNotFound',
-				}
-			).toFlatObject());
+		//Validate if the product exists.
+		if (productId) {
+			const product = await Product.findByPk(productId, { attributes: ['id'] });
+			if (!product) {
+				return res.status(404).json( new ServerError(
+					"The product doesn't exists.",
+					{
+						origin: 'server',
+						type: 'ResourceNotFound',
+					}
+				).toFlatObject());
+			}
 		}
 
-		const cartId = await User.findByPk(id, {
-			attributes: [],
-			include: {
-				model: Cart,
-				attributes: ['id']
+		//Validate if the list exists.
+		if (listId) {
+			const list = await List.findByPk(listId, { attributes: ['id'] });
+			if (!list) {
+				return res.status(404).json( new ServerError(
+					"The list doesn't exists.",
+					{
+						origin: 'server',
+						type: 'ResourceNotFound',
+					}
+				).toFlatObject());
 			}
+		}
+
+		//Validate if the cart exists.
+		let cart = await Cart.findOne({
+			attributes: ['id', 'totalPrice'],
+			where: {
+				user: id,
+			},
 		})
-		if (!cartId) {
+		if (!cart) {
 			console.warn(`Server|\x1b[33m A user (id = ${id}) haven't a cart.\x1b[0m`)
 			const newCart = await Cart.create({
 				user: id,
@@ -45,13 +61,43 @@ export const addItem = async (req, res) => {
 			});
 			cartId = newCart.id;
 		}
+		const cartId = cart.id;
 
+		//The validation about if there references just one product or just one list and is unique in its cart is done in de the model validations and indexes.
 		const newItem = await CartItem.create({
 			product: productId,
+			list: listId,
 			cart: cartId,
 			amount
 		})
 
+		//Pull data from the cart elements for calculate the total.
+		const cartItems = await CartItem.findAll({
+			where: {
+				cart: cartId,
+			},
+			attributes: ['amount'],
+			include: {
+				model: Product,
+				attributes: ['basePrice', 'offerPrice'],
+			}
+		})
+	
+		//Calculate new total price for the cart.
+		let totalPrice = cart.totalPrice;
+
+		cartItems.forEach((item) => {
+			if (item.Product.offerPrice) {
+				totalPrice += item.Product.offerPrice * item.amount;
+			} else {
+				totalPrice += item.Product.basePrice * item.amount;
+			}
+		})
+
+		await cart.update({
+			totalPrice,
+		})
+		
 		return res.status(201).json({
 			message: "Product added correctly to the cart."
 		})
@@ -75,21 +121,21 @@ export const removeItem = async (req, res) => {
 	/*
 	Expected Body:
 	{
-		itemId: NUMBER -> The id of the product in the cart.
+		itemId: NUMBER -> The id of the element in the cart.
 	}
 	*/
 	try {
 		const { itemId } = req.body;
 		const { id } = req.payload;
 
-		const cartItem = await Cart.findOne({
-			where: {user: id},
+		//Get cart element.	
+		const cartItem = await CartItem.findByPk(itemId, {
+			attributes: ['id', 'amount'],
 			include: {
-				model: CartItem,
-				where: { id: itemId },
-				required: true,
+				model: Product,
+				attributes: ['basePrice', 'offerPrice']
 			}
-		})
+		});
 		if (!cartItem) {
 			return res.status(404).json( new ServerError(
 				"Can't remove the cart element because it doesn't exists.",
@@ -100,7 +146,36 @@ export const removeItem = async (req, res) => {
 			).toFlatObject());
 		}
 
+		//Get user's cart.
+		let cart = await Cart.findOne({
+			where: { user: id }
+		})
+		if (!cart) {
+			console.warn(`Server|\x1b[33m A user (id = ${id}) haven't a cart.\x1b[0m`)
+			cart = await Cart.create({
+				user: id,
+				totalPrice: 0.0,
+			});
+		}
+
+		//Calculate new total price of the cart.
+		let totalPrice = cart.totalPrice;
+		if (cartItem.Product.offerPrice) {
+			totalPrice -= cartItem.Product.offerPrice * cartItem.amount;
+		} else {
+			totalPrice -= cartItem.Product.basePrice * cartItem.amount;
+		}
+
+		//Update the cart and destroy the element to remove.
+		await cart.update({
+			totalPrice,
+		})
+
 		await cartItem.destroy();
+
+		return res.status(200).json({
+			message: 'Cart element removed correctly.'
+		})
 	} catch (error) {
 		if (error?.name.includes('Sequelize')) {
 			return await sequelizeErrorManagement(req, res, error);
@@ -121,19 +196,18 @@ export const updateAmount = async (req, res) => {
 	Expected Body:
 	{
 		newAmount: NUMBER -> The new amount of the product in the cart.
+		itemId: NUMBER -> The id of the item to delete.
 	}
 	*/
 	try {
 		const { itemId, newAmount } = req.body;
 		const { id } = req.payload;
 
-		const item = await Cart.findOne({
-			where: { user: id },
-			attributes: [],
+		//Get cart element.
+		const item = await CartItem.findByPk(itemId, {
 			include: {
-				model: CartItem,
-				where: { id: itemId },
-				required: true,
+				model: Product,
+				attributes: ['basePrice', 'offerPrice'],
 			}
 		})
 		if (!item) {
@@ -146,6 +220,33 @@ export const updateAmount = async (req, res) => {
 			).toFlatObject());
 		}
 
+		//Get user's cart.
+		let cart = await Cart.findOne({
+			where: {user: id}
+		});
+
+		if (!cart) {
+			console.warn(`Server|\x1b[33m A user (id = ${id}) haven't a cart.\x1b[0m`)
+			cart = await Cart.create({
+				user: id,
+				totalPrice: 0.0,
+			});
+		}
+
+		//Calculate new total price for the cart.
+		let totalPrice = cart.totalPrice;
+
+		if (item.Product.offerPrice) {
+			totalPrice += item.Product.offerPrice * (newAmount - item.amount);
+		} else {
+			totalPrice += item.Product.basePrice * (newAmount - item.amount);
+		}
+
+		const newCart = await cart.update({
+			totalPrice,
+		})
+
+		//Update the amount of the cart element.
 		const newItem = await item.update({
 			amount: newAmount,
 		});
@@ -168,4 +269,42 @@ export const updateAmount = async (req, res) => {
 	}
 }
 
-//To Do: Update the total price of the cart in the controllers.
+export const getCart = async (req, res) => {
+	try {
+		const { id } = req.payload;
+
+		//Look for the user's cart and its elements.
+		let cart = await Cart.findAll({
+			where: { user: id },
+			include: {
+				model: CartItem,
+				include: {
+					model: Product,
+					attributes: ['id', 'image', 'name', 'basePrice', 'offerPrice']
+				}
+			}	
+		})
+		if (!cart) {
+			console.warn(`Server|\x1b[33m A user (id = ${id}) haven't a cart.\x1b[0m`);
+			const cart = await Cart.create({
+				user: id,
+				totalPrice: 0.0,
+			})
+		}
+
+		return res.status(200).json({
+			message: 'Cart got successfully.',
+			cart: cart.map(c => c.toJSON()),
+		})
+	} catch(error) {
+		if (error?.name.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error);
+		}
+
+		return res.status(500).json( new ServerError(
+			"Unknown error getting the user's cart."
+		).toFlatObject());
+	}
+}
+
+//Testear código.

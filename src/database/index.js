@@ -12,6 +12,8 @@ import Course from './models/Course.js';
 import Category from './models/Category.js';
 import CartItem from './models/CartItem.js';
 import Cart from './models/Cart.js';
+import { setRandomFallback } from 'bcryptjs';
+import { toDefaultValue } from 'sequelize/lib/utils';
 
 export const createRealtionships = () => {
 	Grade.hasMany(Course, {
@@ -94,6 +96,13 @@ export const createRealtionships = () => {
 		foreignKey: 'list',
 	});
 
+	List.hasMany(CartItem, {
+		foreignKey: 'list',
+	});
+	CartItem.belongsTo(List, {
+		foreignKey: 'list',
+	});
+
 	Product.hasMany(CartItem, {
 		foreignKey: 'product',
 	});
@@ -145,7 +154,34 @@ export const syncDBConnection = async () => {
 		await database.authenticate();
 
 		console.log('\x1b[34m%s\x1b[0m%s', 'Node|', ' Verifying if the models exists in the data base...')
-		await database.sync().then(async () => {
+		await database.sync({ force: true }).then(async () => {
+			//Temporal, de desarrollo (quitar el froce: true del sync cuando se quite esto o antes de la producción).
+			await User.create({
+				user: 'user-1d99768a-f2a9-4459-b119-5b380384f184',
+				dni: '48968281',
+				name: 'Joaquín Loberza',
+				email: 'loberzajoaquin@gmail.com',
+				password: '1234',
+				address: 'San Lorenzo 208, Ciudad de Mendoza',
+				role: 'admin',
+				verified: true,
+			});
+			await Cart.create({
+				user: 1,
+				totalPrice: 0.0,
+			})
+			await Category.create({
+				uiName: 'Colores',
+			});
+			await Product.create({
+				name: 'Faber Castelle 25 u',
+				stock: 340,
+				basePrice: 6700,
+				offerPrice: 4500,
+				description: 'Caja de colores Faber Castelle con 25 unidades.',
+				category: 1,
+			});
+			//Hasta acá es lo de temporal.
 			await Grade.bulkCreate([
 				{ number: 1 },
 				{ number: 2 },
@@ -169,6 +205,7 @@ export const syncDBConnection = async () => {
 			], { ignoreDuplicates: true });
 		})
 	} catch (error) {
+		console.log(error)
 		switch (error.name) {
 			case 'SequelizeConnectionRefusedError':
 				console.error('\x1b[34m%s \x1b[31m%s\x1b[0m', 'Node| ', `Couldn't connect whit MySQL service.`);

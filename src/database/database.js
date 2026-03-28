@@ -20,7 +20,7 @@ const database = new Sequelize(
 				if (error) {console.log(`Server|\x1b[31m Error registering sequelize logs.\x1b[0m\n\nError Object:\n`, error)}
 			})
 		}, */
-		timezone: '-03:00',
+		timezone: '+00:00',
 		pool: {
 			max: 5,
 			min: 0,
