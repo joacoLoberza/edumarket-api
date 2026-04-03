@@ -76,6 +76,7 @@ Course.init(
 		},
 		gradeFk: {
 			type: DataTypes.INTEGER,
+			unique: 'all',
 			allowNull: false,
 			references: {
 				model: Grade,
@@ -96,6 +97,7 @@ Course.init(
 		},
 		divFk: {
 			type: DataTypes.INTEGER,
+			unique: 'all',
 			allowNull: true,
 			references: {
 				model: Div,
@@ -116,6 +118,7 @@ Course.init(
 		},
 		levelFk: {
 			type: DataTypes.INTEGER,
+			unique: 'all',
 			allowNull: false,
 			references: {
 				model: Level,
@@ -134,23 +137,6 @@ Course.init(
 				},
 			},
 		},
-		checkSum: {
-			type: DataTypes.INTEGER,
-			allowNull: false,
-			unique: true,
-			validate: {
-				min: {
-					args: [3],
-					msg: JSON.stringify(new ServerError(
-						`Invalid course.`,
-						{
-							origin: 'sequelize',
-							type: 'InvalidDataSent',
-						}
-					)),
-				}
-			}
-		}
 	}, { sequelize: database }
 );
 

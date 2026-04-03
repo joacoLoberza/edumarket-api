@@ -1,6 +1,6 @@
 /**
  * @typedef { 'unknown' | 'server' | 'sequelize' | 'cloudinary' | 'jwt' | 'multer' | 'sharp' | 'nodemailer' } ErrorOrigin
- * @typedef { 'ResourceNotFound' | 'InvalidCredentials' | 'MissingFields' | 'Overloaded' | 'Unknown' | 'InvalidDataSent' | 'UniqueDataRepeated' | 'JWTLeft' | 'InvalidJWT' | 'PermissionDenied' | 'Query' | 'Internal'} ErrorType
+ * @typedef { 'ResourceNotFound' | 'InvalidCredentials' | 'MissingFields' | 'Overloaded' | 'Unknown' | 'InvalidDataSent' | 'UniqueDataRepeated' | 'JWTLeft' | 'InvalidJWT' | 'PermissionDenied' | 'Query' | 'Internal' | 'Conflict'} ErrorType
  */
 
 class ServerError {
@@ -34,7 +34,8 @@ class ServerError {
 			'InvalidJWT',
 			'PermissionDenied',
 			'Query',
-			'Internal'
+			'Internal',
+			'Conflict',
 		];
 		
 		this.origin = (allowedOrgins.includes(origin)) ? origin : `${origin}  \x1b[33;1m[!]\x1b[22m(This is not an expected origin in the server.)\x1b[0m`;

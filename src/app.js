@@ -7,6 +7,7 @@ import { clearUnverifiedCronJob } from './utils/cronJobs/clearUnverified.js';
 import usersRouter from './routers/userRouter.js';
 import cartRouter from './routers/cartRouter.js';
 import categoryRouter from './routers/categoryRouter.js';
+import courseRouter from './routers/courseRouter.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +19,7 @@ app.use(cors({
 app.use('/user', usersRouter);
 app.use('/cart', cartRouter);
 app.use('/category', categoryRouter);
+app.use('/course', courseRouter);
 
 const startServer = async () => {
 	createRealtionships();

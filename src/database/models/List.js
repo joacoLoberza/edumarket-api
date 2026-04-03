@@ -80,11 +80,11 @@ List.beforeCreate((list) => {
 		}
 	} else if (list.isAssembled === false) {
 		if (list.user != null) {
-			console.warn(`Server|\x1b[33m The field user in model List wouldn't be sent in a assembled list, eliminating id...\x1b[0m`);
+			console.warn(`Server|\x1b[33m The field user in model List wouldn't be sent in a not assembled list, eliminating id...\x1b[0m`);
 			list.user = null;
 		}
 		if (list.name != null) {
-			console.warn(`Server|\x1b[33m The field name in model List wouldn't be sent in a assembled list, eliminating id...\x1b[0m`);
+			console.warn(`Server|\x1b[33m The field name in model List wouldn't be sent in a not assembled list, eliminating id...\x1b[0m`);
 			list.name = null;
 		}
 	}

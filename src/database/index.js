@@ -12,8 +12,6 @@ import Course from './models/Course.js';
 import Category from './models/Category.js';
 import CartItem from './models/CartItem.js';
 import Cart from './models/Cart.js';
-import { setRandomFallback } from 'bcryptjs';
-import { toDefaultValue } from 'sequelize/lib/utils';
 
 export const createRealtionships = () => {
 	Grade.hasMany(Course, {
@@ -25,29 +23,23 @@ export const createRealtionships = () => {
 
 	Div.hasMany(Course, {
 		foreignKey: 'divFk',
-		onDelete: 'CASCADE',
 	});
 	Course.belongsTo(Div, {
 		foreignKey: 'divFk',
-		onDelete: 'CASCADE',
 	});
 
 	Level.hasMany(Course, {
 		foreignKey: 'levelFk',
-		onDelete: 'CASCADE',
 	});
 	Course.belongsTo(Level, {
 		foreignKey: 'levelFk',
-		onDelete: 'CASCADE',
 	});
 
 	Course.hasMany(List, {
 		foreignKey: 'course',
-		onDelete: 'CASCADE',
 	});
 	List.belongsTo(Course, {
 		foreignKey: 'course',
-		onDelete: 'CASCADE',
 	});
 
 	School.hasMany(List, {
@@ -200,8 +192,8 @@ export const syncDBConnection = async () => {
 			], { ignoreDuplicates: true });
 
 			await Level.bulkCreate([
-				{ level: 'primaria' },
-				{ level: 'jardín' },
+				{ level: 'Primario' },
+				{ level: 'Jardín' },
 			], { ignoreDuplicates: true });
 		})
 	} catch (error) {
