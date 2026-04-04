@@ -978,6 +978,17 @@ export const searchAllUsers = async (req, res) => {
 	try {
 		const { search = '', limit = 10, cursor, order = 'ASC', verified, role } = req.query;
 		const escapedSearch = search.replace('%','\\%').replace('_', '\\_');
+		let fakeData = false;
+
+		try {
+			Number(cursor); Number(limit)
+		} catch (error) {
+			fakeData = true;
+		}
+
+		if ((order !== 'ASC' && order !== 'DESC') || fakeData) {
+			return res.status(400).json( new ServerError("Invalid query fields.", { origin:'server', type: 'InvalidDataSent' }).toFlatObject());
+		}
 
 		//Make query filter.
 		const queryFilter = {

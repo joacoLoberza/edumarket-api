@@ -166,7 +166,7 @@ export const updateCategories = async (req, res) => {
 		let nameIdArr = [];
 		let imageIdArr = [];
 
-
+		// Build the set of category ids to update.
 		nameIdArr = namesList.map(name => name.id);
 		if (req.files) {
 			imageIdArr = req.files.map(file => Number(file.fieldname.split('-')[1]));

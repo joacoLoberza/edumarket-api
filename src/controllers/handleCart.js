@@ -7,11 +7,11 @@ import sequelizeErrorManagement from '../utils/sequelizeErrorManagement.js';
 
 export const addItem = async (req, res) => {
 	/*
-	Expexted Body:
+	Expected Body:
 	{
-		listId: NUMBER -> The ID of the list to add. | OPTIONAL when isn't productId
-		productId: NUMBER -> The ID of the product to add. | OPTIONAL when isn't listId 
-		amount: NUMBER -> The amount of products to add.
+		listId: NUMBER -> The ID of the list to add. | OPTIONAL when productId is used.
+		productId: NUMBER -> The ID of the product to add. | OPTIONAL when listId is used.
+		amount: NUMBER -> The quantity of the item to add.
 	}
 	*/
 	try {
@@ -46,7 +46,7 @@ export const addItem = async (req, res) => {
 			}
 		}
 
-		//Validate if the cart exists.
+		// Find the user's cart if it exists.
 		let cart = await Cart.findOne({
 			attributes: ['id', 'totalPrice'],
 			where: {
@@ -71,7 +71,7 @@ export const addItem = async (req, res) => {
 			amount
 		})
 
-		//Pull data from the cart elements for calculate the total.
+		// Pull cart items to recalculate total price.
 		const cartItems = await CartItem.findAll({
 			where: {
 				cart: cartId,

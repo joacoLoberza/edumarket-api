@@ -1,5 +1,6 @@
 import database from '../database.js';
 import { Model, DataTypes } from 'sequelize';
+import ServerError from '../../utils/ServerError.js';
 
 class School extends Model { };
 School.init(
@@ -12,6 +13,15 @@ School.init(
 		name: {
 			type: DataTypes.STRING,
 			allowNull: false,
+		},
+		image: {
+			type: DataTypes.STRING,
+			defaultValue: process.env.DEF_SCHOOL_IMG,
+			validate: {
+				isUrl: {
+					msg: JSON.stringify( new ServerError( "This field requires an url.", { origin: 'sequelize', type:'InvalidDataSent' }).toFlatObject())
+				}
+			}
 		},
 		cue: {
 			type: DataTypes.STRING,
