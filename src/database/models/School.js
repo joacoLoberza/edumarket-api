@@ -28,14 +28,15 @@ School.init(
 			allowNull: false,
 			unique: true,
 			validate: {
-				isAlpha: {
+				isNumeric: {
 					msg: 'Numero CUE invalido.'
 				},
 				checkFigures() {
-					const total = 0;
+					let total = 0;
 					for (const figure of this.cue) {
 						total += 1;
 					}
+
 					if (total !== 7) {
 						console.error(`Server|\x1b[31m Error in the model School in cue field, invalid CUE number (there aren't 7 figures).\x1b[0m`);
 						throw new Error('Número de CUE invalido.');

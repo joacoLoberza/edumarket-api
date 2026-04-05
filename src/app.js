@@ -8,6 +8,7 @@ import usersRouter from './routers/userRouter.js';
 import cartRouter from './routers/cartRouter.js';
 import categoryRouter from './routers/categoryRouter.js';
 import courseRouter from './routers/courseRouter.js';
+import schoolRouter from './routers/schoolRouter.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +21,7 @@ app.use('/user', usersRouter);
 app.use('/cart', cartRouter);
 app.use('/category', categoryRouter);
 app.use('/course', courseRouter);
+app.use('/school', schoolRouter);
 
 const startServer = async () => {
 	createRealtionships();

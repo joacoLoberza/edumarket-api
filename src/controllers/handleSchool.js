@@ -19,7 +19,7 @@ export const addSchool = async (req, res) => {
 	*/
 	try {
 		const { cue, name } = req.body;
-		const { buffer } = req.file;
+		const buffer = req?.file?.buffer;
 		let image = null;
 
 		//Validate required fields.
@@ -56,16 +56,13 @@ export const getSchools = async (req, res) => {
 		limit = Registers limit.
  	*/
 	try {
-		const { cursor, search, order = 'ASC', limit = 10 } = req.query;
+		let { cursor, search = '', order = 'ASC', limit = 10 } = req.query;
 		const escapedSearch = search ? search.replace('%', '\\%').replace('_','\\_') : '%';
 		let fakeData = false;
 
 		//Validate required fields.
-		try {
-			Number(limit); Number(cursor);
-		} catch (error) {
-			fakeData = true;
-		}
+		if (!Number(limit)) fakeData = true;
+		if (cursor) if (!Number(cursor)) fakeData = true;
 
 		if ((order !== 'ASC' && order !== 'DESC') || fakeData) return res.status(400).json( new ServerError(
 			"Any query field is invalid.",
@@ -75,11 +72,12 @@ export const getSchools = async (req, res) => {
 		//Create where clause.
 		const filter = {
 			[Op.or]: [
-				{cue: { [Op.like]: escapedSearch, [Op.escape]: '\\'}},
-				{name: { [Op.like]: escapedSearch, [Op.escape]: '\\'}},
+				{cue: { [Op.like]: `%${escapedSearch}%`}},
+				{name: { [Op.like]: `%${escapedSearch}%`}},
 			]
 		}
 
+		cursor = Number(cursor)
 		if (cursor) {
 			filter.id = (order === 'ASC') ? {[Op.gt]: cursor} : {[Op.lt]: cursor};
 		}
@@ -98,10 +96,11 @@ export const getSchools = async (req, res) => {
 			nextCursor: schools.length > 0 ? schools[schools.length - 1].id : null,
 		})
 	} catch (error) {
+		console.log(error)
 		if (error?.name.includes('Sequelize')) {
 			return await sequelizeErrorManagement(req, res, error);
 		}
-		return res.status(500).json( new ServerError( "Couldn't add a school.", { origin: 'unknown', type: 'Unknown' }).toFlatObject());
+		return res.status(500).json( new ServerError( "Couldn't get the schools.", { origin: 'unknown', type: 'Unknown' }).toFlatObject());
 	}
 }
 
@@ -129,16 +128,17 @@ export const deleteSchool = async (req, res) => {
 		))
 
 		//Delte school image if it isn't default.
-		if (school.image !== process.env.DEF_SCHOOL_IMG) cloudinary.uploader.destroy(`schoolImages/${school.image.split('/').pop()}`, { resource_type: 'image' })
+		if (school.image !== process.env.DEF_SCHOOL_IMG && school.image) cloudinary.uploader.destroy(`schoolImages/${school.image.split('/').pop()}`, { resource_type: 'image' })
 		
 		//Delete image.
 		await school.destroy();
 		return res.status(200).json({ message: 'School deleted successfully.' });
 	} catch (error) {
+		console.log(error)
 		if (error?.name.includes('Sequelize')) {
 			return await sequelizeErrorManagement(req, res, error);
 		}
-		return res.status(500).json( new ServerError( "Couldn't add a school.", { origin: 'unknown', type: 'Unknown' }).toFlatObject());
+		return res.status(500).json( new ServerError( "Couldn't delete the school.", { origin: 'unknown', type: 'Unknown' }).toFlatObject());
 	}
 }
 
@@ -192,6 +192,6 @@ export const editSchool = async (req, res) => {
 		if (error?.name.includes('Sequelize')) {
 			return await sequelizeErrorManagement(req, res, error);
 		}
-		return res.status(500).json( new ServerError( "Couldn't add a school.", { origin: 'unknown', type: 'Unknown' }).toFlatObject());
+		return res.status(500).json( new ServerError( "Couldn't edit the school.", { origin: 'unknown', type: 'Unknown' }).toFlatObject());
 	}
 }

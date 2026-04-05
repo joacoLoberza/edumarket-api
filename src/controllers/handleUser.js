@@ -976,15 +976,12 @@ export const searchAllUsers = async (req, res) => {
 		role -> Filter whit user's role (don't send this if wan't to see all). (OPTIONAL)
 	*/
 	try {
-		const { search = '', limit = 10, cursor, order = 'ASC', verified, role } = req.query;
+		let { search = '', limit = 10, cursor, order = 'ASC', verified, role } = req.query;
 		const escapedSearch = search.replace('%','\\%').replace('_', '\\_');
 		let fakeData = false;
 
-		try {
-			Number(cursor); Number(limit)
-		} catch (error) {
-			fakeData = true;
-		}
+		if (!Number(limit)) fakeData = true;
+		if (cursor) if(!Number(cursor)) fakeData = true;
 
 		if ((order !== 'ASC' && order !== 'DESC') || fakeData) {
 			return res.status(400).json( new ServerError("Invalid query fields.", { origin:'server', type: 'InvalidDataSent' }).toFlatObject());
@@ -994,13 +991,14 @@ export const searchAllUsers = async (req, res) => {
 		const queryFilter = {
 			//Search by name, dni or email.
 			[Op.or] : [
-				{name: {[Op.like]: `%${escapedSearch}%`, [Op.escape]: '\\'}},
-				{dni: {[Op.like]: `%${escapedSearch}%`, [Op.escape]: '\\'}},
-				{email: {[Op.like]: `%${escapedSearch}%`, [Op.escape]: '\\'}}
+				{name: {[Op.like]: `%${escapedSearch}%`}},
+				{dni: {[Op.like]: `%${escapedSearch}%`}},
+				{email: {[Op.like]: `%${escapedSearch}%`}}
 			]
 		};
 
 		//If there is a cursor, query starting in cursor (else in the start / end of the table).
+		cursor = Number(cursor);
 		if (cursor) {
 				queryFilter.id = (order === 'ASC')? {[Op.gt]: cursor} : {[Op.lt]: cursor};
 		}
@@ -1039,6 +1037,7 @@ export const searchAllUsers = async (req, res) => {
 			nextCursor,
 		})
 	} catch (error) {
+		console.log(error)
 		if (error.name?.includes('Sequelize')) {
 			return await sequelizeErrorManagement(req, res, error)
 		}
