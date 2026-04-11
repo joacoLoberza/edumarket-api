@@ -77,7 +77,7 @@ Product.init(
 		image: {
 			type: DataTypes.STRING,
 			unique: true,
-			//FALTA PONER URL DEFAULT PARA IMÁGEN DEL PRODUCTO
+			defaultValue: process.env.DEF_PROD_IMG
 		}
 	}, { sequelize: database }
 );

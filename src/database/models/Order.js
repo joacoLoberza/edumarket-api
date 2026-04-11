@@ -2,6 +2,7 @@ import database from '../database.js';
 import { Model, DataTypes } from 'sequelize';
 import User from './User.js';
 import ServerError from '../../utils/ServerError.js';
+import { Json } from 'sequelize/lib/utils';
 
 class Order extends Model { };
 Order.init(
@@ -48,6 +49,15 @@ Order.init(
 				},
 			},
 		},
+		preferenceURL: {
+			type: DataTypes.STRING,
+			unique: true,
+			validate: {
+				isUrl: {
+					msg: JSON.stringify(new ServerError("The field is not an URL.", { origin: 'sequelize', type: 'InvalidDataSent'}).toFlatObject())
+				}
+			}
+		}
 	}, { sequelize: database }
 );
 
