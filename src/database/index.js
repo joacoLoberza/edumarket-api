@@ -165,14 +165,36 @@ export const syncDBConnection = async () => {
 			await Category.create({
 				uiName: 'Colores',
 			});
-			await Product.create({
-				name: 'Faber Castelle 25 u',
-				stock: 340,
-				basePrice: 6700,
-				offerPrice: 4500,
-				description: 'Caja de colores Faber Castelle con 25 unidades.',
-				category: 1,
+			await Product.create(
+				{
+					name: 'Faber Castelle 25 u',
+					stock: 340,
+					basePrice: 6700,
+					offerPrice: 4500,
+					description: 'Caja de colores Faber Castelle con 25 unidades.',
+					category: 1,
 			});
+			await Product.create(
+				{
+					name: 'Hojas Gloria',
+					stock: 500,
+					basePrice: 6700,
+					offerPrice: null,
+					description: 'Posole',
+					category: 1,
+				},
+			);
+
+			await Product.create(
+				{
+					name: 'Holanda',
+					stock: 34,
+					basePrice: 6600,
+					offerPrice: 4200,
+					description: 'Example',
+					category: 1,
+				},
+			);
 			//Hasta acá es lo de temporal.
 			await Grade.bulkCreate([
 				{ number: 1 },

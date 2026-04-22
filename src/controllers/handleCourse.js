@@ -8,7 +8,7 @@ import School from "../database/models/School.js";
 export const getGrades = async (req, res) => {
 	try {
 		const grades = await Grade.findAll();
-		if (grades == []) {
+		if (grades.length === 0) {
 			return res.status(404).json( new ServerError("The grades wheren't found.", {origin: 'server', type: 'ResourceNotFound'}).toFlatObject());
 		}
 		return res.status(200).json({
@@ -26,7 +26,7 @@ export const getGrades = async (req, res) => {
 export const getDivisions = async (req, res) => {
 	try {
 		const divs = await Div.findAll();
-		if (divs == []) {
+		if (divs.length === 0) {
 			res.status(404).json( new ServerError("The divisions wheren't found.", { origin: 'server', type: 'ResourceNotFound'}).toFlatObject());
 		}
 		return res.status(200).json({
@@ -44,7 +44,7 @@ export const getDivisions = async (req, res) => {
 export const getLevels = async (req, res) => {
 	try {
 		const levels = await Level.findAll();
-		if (levels == []) {
+		if (levels.length === 0) {
 			return res.status(404).json( new ServerError("The education levels wheren't found.", { origin: 'server', type:'ResourceNotFound' }).toFlatObject());
 		}
 		return res.status(200).json({
@@ -147,22 +147,18 @@ export const deleteLevel = async (req, res) => {
 			include: [
 				{
 					model: Course,
-					key: 'id',
 					attributes: ['id'],
 					include: [
 						{
 							model: Div,
-							key: 'id',
 							attributes: ['word'],
 						},
 						{
 							model: Grade,
-							key: 'id',
 							attributes: ['number'],
 						},
 						{
 							model: Level,
-							key: 'id',
 							attributes: ['level'],
 							where: {
 								id: levelId,
@@ -173,7 +169,6 @@ export const deleteLevel = async (req, res) => {
 				},
 				{
 					model: School,
-					key: 'id',
 					attributes: ['name'],
 				}
 			]
@@ -226,12 +221,10 @@ export const deleteDivision = async (req, res) => {
 			include: [
 				{
 					model: Course,
-					key: 'id',
 					attributes: ['id'],
 					include: [
 						{
 							model: Div,
-							key: 'id',
 							attributes: ['word'],
 							where: {
 								id: divId,
@@ -240,19 +233,16 @@ export const deleteDivision = async (req, res) => {
 						},
 						{
 							model: Grade,
-							key: 'id',
 							attributes: ['number'], 
 						},
 						{
 							model: Level,
-							key: 'id',
 							attributes: ['level'],
 						}
 					]
 				},
 				{
 					model: School,
-					key: 'id',
 					attributes: ['name'],
 				}
 			]
@@ -305,17 +295,14 @@ export const deleteGrade = async (req, res) => {
 			include: [
 				{
 					model: Course,
-					key: 'id',
 					attributes: ['id'],
 					include: [
 						{
 							model: Div,
-							key: 'id',
 							attributes: ['word'],
 						},
 						{
 							model: Grade,
-							key: 'id',
 							attributes: ['number'], 
 							where: {
 								id: gradeId,
@@ -324,14 +311,12 @@ export const deleteGrade = async (req, res) => {
 						},
 						{
 							model: Level,
-							key: 'id',
 							attributes: ['level'],
 						}
 					]
 				},
 				{
 					model: School,
-					key: 'id',
 					attributes: ['name'],
 				}
 			]

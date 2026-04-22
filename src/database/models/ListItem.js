@@ -40,7 +40,7 @@ ListItem.init(
 				min: 1,
 			},
 		},
-	}, { sequelize: database }
+	}, { sequelize: database, paranoid: true }
 );
 
 export default ListItem;

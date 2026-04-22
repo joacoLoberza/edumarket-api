@@ -1,12 +1,12 @@
 import express from "express";
 import { getLevels, getDivisions, getGrades, addDivision, addLevel, addGrade, deleteDivision, deleteGrade, deleteLevel } from "../controllers/handleCourse.js";
 import adminBarrer from "../middlewares/adminBarrer.js";
-import jwtVerification from "../middlewares/jwtVerification.js";
+import jwtVerify from "../middlewares/jwtVerification.js";
 import verificationBarrer from	"../middlewares/verificationBarrer.js";
 
 const courseRouter = express.Router();
 
-courseRouter.use(jwtVerification, adminBarrer, verificationBarrer);
+courseRouter.use(jwtVerify, adminBarrer, verificationBarrer);
 courseRouter.get('/level', getLevels);
 courseRouter.get('/division', getDivisions);
 courseRouter.get('/grades', getGrades);

@@ -2,6 +2,10 @@ import CartItem from '../database/models/CartItem.js';
 import Product from '../database/models/Product.js';
 import Cart from '../database/models/Cart.js';
 import List from '../database/models/List.js';
+import ListItem from '../database/models/ListItem.js';
+import Course, { Div, Grade, Level } from '../database/models/Course.js';
+import School from '../database/models/School.js';
+import Category from '../database/models/Category.js';
 import ServerError from '../utils/ServerError.js';
 import sequelizeErrorManagement from '../utils/sequelizeErrorManagement.js';
 
@@ -71,12 +75,7 @@ export const addItem = async (req, res) => {
 			amount
 		})
 
-		// Pull cart items to recalculate total price.
-		const cartItems = await CartItem.findAll({
-			where: {
-				cart: cartId,
-			},
-			attributes: ['amount'],
+		await newItem.reload({
 			include: {
 				model: Product,
 				attributes: ['basePrice', 'offerPrice'],
@@ -86,13 +85,11 @@ export const addItem = async (req, res) => {
 		//Calculate new total price for the cart.
 		let totalPrice = cart.totalPrice;
 
-		cartItems.forEach((item) => {
-			if (item.Product.offerPrice) {
-				totalPrice += item.Product.offerPrice * item.amount;
-			} else {
-				totalPrice += item.Product.basePrice * item.amount;
-			}
-		})
+		if (newItem.Product.offerPrice) {
+			totalPrice += newItem.Product.offerPrice * newItem.amount;
+		} else {
+			totalPrice += newItem.Product.basePrice * newItem.amount;
+		}
 
 		await cart.update({
 			totalPrice,
@@ -103,6 +100,7 @@ export const addItem = async (req, res) => {
 		})
 
 	} catch (error) {
+		console.log(error)
 		if (error?.name.includes('Sequelize')) {
 			return await sequelizeErrorManagement(req, res, error)
 		}
@@ -278,10 +276,31 @@ export const getCart = async (req, res) => {
 			where: { user: id },
 			include: {
 				model: CartItem,
-				include: {
-					model: Product,
-					attributes: ['id', 'image', 'name', 'basePrice', 'offerPrice']
-				}
+				include: [
+					{
+						model: Product,
+						attributes: ['id', 'image', 'name', 'basePrice', 'offerPrice'],
+					},
+					{
+						model: List,
+						attributes: ['id', 'name', 'isAssembled'],
+						include: [
+							{
+								model: Course,
+								attributes: ['id'],
+								include: [
+									{ model: Grade },
+									{ model: Div },
+									{ model: Level },
+								]
+							},
+							{
+								model: School,
+								attributes: ['id', 'name', 'image'],
+							},
+						]
+					}
+				]
 			}	
 		})
 		if (!cart) {

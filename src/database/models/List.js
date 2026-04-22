@@ -1,5 +1,5 @@
 import database from '../database.js';
-import { Model, DataTypes } from 'sequelize';
+import { Model, DataTypes, ValidationError } from 'sequelize';
 import School from './School.js';
 import Course from './Course.js';
 import User from './User.js';
@@ -78,6 +78,9 @@ List.beforeCreate((list) => {
 			console.warn(`Server|\x1b[33m The field course in model List wouldn't be sent in a assembled list, eliminating id...\x1b[0m`);
 			list.course = null;
 		}
+		if (!list.user) 
+			throw new ValidationError();
+
 	} else if (list.isAssembled === false) {
 		if (list.user != null) {
 			console.warn(`Server|\x1b[33m The field user in model List wouldn't be sent in a not assembled list, eliminating id...\x1b[0m`);
@@ -87,6 +90,8 @@ List.beforeCreate((list) => {
 			console.warn(`Server|\x1b[33m The field name in model List wouldn't be sent in a not assembled list, eliminating id...\x1b[0m`);
 			list.name = null;
 		}
+		if (!list.course || !list.school)
+			throw new ValidationError();
 	}
 })
 

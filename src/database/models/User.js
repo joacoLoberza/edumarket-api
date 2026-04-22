@@ -39,7 +39,6 @@ User.init(
 		},
 		image: {
 			type: DataTypes.STRING,
-			unique: true,
 			defaultValue: process.env.DEF_PROF_IMG,
 			validate: {
 				isUrl: {

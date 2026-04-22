@@ -76,10 +76,9 @@ Product.init(
 		},
 		image: {
 			type: DataTypes.STRING,
-			unique: true,
 			defaultValue: process.env.DEF_PROD_IMG
 		}
-	}, { sequelize: database }
+	}, { sequelize: database, paranoid: true }
 );
 
 export default Product;
