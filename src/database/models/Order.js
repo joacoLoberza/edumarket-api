@@ -16,7 +16,7 @@ Order.init(
 			type: DataTypes.ENUM('pending', 'paid', 'cancelled', 'refunded', 'shipped', 'faild'),
 			defaultValue: 'pending'
 		},
-		orederNumber: {
+		orderNumber: {
 			type: DataTypes.INTEGER,
 			allowNull: false
 		},
@@ -57,7 +57,19 @@ Order.init(
 					msg: JSON.stringify(new ServerError("The field is not an URL.", { origin: 'sequelize', type: 'InvalidDataSent'}).toFlatObject())
 				}
 			}
+		},
+		paymentId: {
+			type: DataTypes.INTEGER,
+		},
+		preferenceId: {
+			type: DataTypes.STRING,
+			unique: true,
+		},
+		paidAt: {
+			type: DataTypes.DATE,
+			unique: true,
 		}
+
 	}, { sequelize: database }
 );
 

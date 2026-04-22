@@ -9,6 +9,11 @@ import cartRouter from './routers/cartRouter.js';
 import categoryRouter from './routers/categoryRouter.js';
 import courseRouter from './routers/courseRouter.js';
 import schoolRouter from './routers/schoolRouter.js';
+import orderRouter from './routers/orderRouter.js';
+import jwtVerify from './middlewares/jwtVerification.js';
+import verificationBarrer from './middlewares/verificationBarrer.js';
+
+import ordersWebhook from './webhooks/ordersWebhook.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,11 +22,15 @@ app.use(express.json());
 app.use(cors({
 	origin : process.env.CLIENT_URL || "http://localhost"
 }));
+
+app.use('/webhooks/mp', ordersWebhook);
+
 app.use('/user', usersRouter);
 app.use('/cart', cartRouter);
 app.use('/category', categoryRouter);
 app.use('/course', courseRouter);
 app.use('/school', schoolRouter);
+app.use('/order', jwtVerify, verificationBarrer, orderRouter);
 
 const startServer = async () => {
 	createRealtionships();

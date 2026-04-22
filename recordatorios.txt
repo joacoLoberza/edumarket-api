@@ -1,3 +1,4 @@
-1. Antes de eleminiar una imágen, validar que no se a la imágen por defecto cuando no hay imágen.
-2. Crear seeds y migracioenes.
-3. QUITAR EL FORCE DE sequelize.sync() (MUY IMPORATNTE).
+				_. Crear seeds y migracioenes.
+(MUY IMPORATNTE)_. QUITAR EL FORCE DE sequelize.sync().
+(MUY IMPORATNTE)_. Agregar configuraciones de pago en los productos y modificar la creación de la preferencia al crear la orden.
+				_. Completar el webhook. El de pago aprovado tiene que descontar el stock y eliminar los items del carrito en una tensaccion.
