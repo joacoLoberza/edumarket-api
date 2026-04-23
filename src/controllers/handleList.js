@@ -29,12 +29,12 @@ export const createList = async (req, res) => {
 		const { id: userId, role: userRole } = req.payload;
 
 		if (!name || assembled == null || Number.isNaN(assembled) || (assembled === false && !schoolId || !gradeId || !divId || !levelId) || (assembled === true && !user)) {
-			return res.status(400).json( new ServerError( "There are missing fields in the request.", { origin: 'server', type: 'MissingFields' }));
+			return res.status(400).json( new ServerError( "There are missing fields in the request.", { origin: 'server', type: 'MissingFields' }).toFlatObject());
 		}
 
 		//Validate permissions.
 		if (assembled === false && userRole !== 'admin') {
-			return res.status(403).json( new ServerError( "Permission denied for create this kind of list.", { origin: 'server', type: 'PermissionDenied' }));
+			return res.status(403).json( new ServerError( "Permission denied for create this kind of list.", { origin: 'server', type: 'PermissionDenied' }).toFlatObject());
 		}
 
 		//Search course.
@@ -75,7 +75,7 @@ export const createList = async (req, res) => {
 			return await sequelizeErrorManagement(req, res, error);
 		}
 
-		return res.status(500).json( new ServerError( "Couldn't create a new list.", { origin: 'unknown', type: 'Unknown' }));
+		return res.status(500).json( new ServerError( "Couldn't create a new list.", { origin: 'unknown', type: 'Unknown' }).toFlatObject());
 	}
 }
 
@@ -97,14 +97,14 @@ export const deleteList = async (req, res) => {
 		if (!list) {
 			return res.status(404).json( new ServerError(
 				"List not found.", { origin: 'server', type: 'ResourceNotFound' }
-			));
+			).toFlatObject());
 		}
 
 		//Verify user premissions.
 		if (!list.isAssembled && userRole !== 'admin') {
 			return res.status(403).json( new ServerError(
 				"Permission denied for delete this kind of list.", { origin: 'server', type: 'PermissionDenied' }
-			));
+			).toFlatObject());
 		}
 
 		//Lists are soft deleted.
@@ -130,20 +130,20 @@ export const editList = async (req, res) => {
 		})
 
 		if (!list) {
-			return res.status(404).json( new ServerError( "Couldn't found the list to update.", { origin: 'server', type: 'ResourceNotFound' }));
+			return res.status(404).json( new ServerError( "Couldn't found the list to update.", { origin: 'server', type: 'ResourceNotFound' }).toFlatObject());
 		}
 
 		if (!list.isAssembled && userRole !== 'admin') {
-			return res.status(403).json( new ServerError( "Permission denied for list edition.", { origin: 'server', type: 'PermissionDenied' }));
+			return res.status(403).json( new ServerError( "Permission denied for list edition.", { origin: 'server', type: 'PermissionDenied' }).toFlatObject());
 		}
 
 		const school = await School.findByPk(newSchool, { attributes: ['id'], raw: true });
 		if (!school)
-			return res.status(404).json( new ServerError( "Invalid school ID.", { origin: 'server', type: 'ResourceNotFound' } ));
+			return res.status(404).json( new ServerError( "Invalid school ID.", { origin: 'server', type: 'ResourceNotFound' } ).toFlatObject());
 
 		const course = await Course.findByPk(newCourse, { attributes: ['id'], raw: true });
 		if (!course)
-			return res.status(404).json( new ServerError( "Invalid course ID.", { origin: 'server', type: 'ResourceNotFound' } ));
+			return res.status(404).json( new ServerError( "Invalid course ID.", { origin: 'server', type: 'ResourceNotFound' } ).toFlatObject();
 
 		await list.update({
 			name: newName,
@@ -157,12 +157,48 @@ export const editList = async (req, res) => {
 			return await sequelizeErrorManagement(req, res, error);
 		}
 
-		return res.status(500).json( new ServerError( "Unknown error updating the list.", { origin: 'server', type: 'Unknown' } ));
+		return res.status(500).json( new ServerError( "Unknown error updating the list.", { origin: 'server', type: 'Unknown' } ).toFlatObject());
 	}
 }
 
 export const addListItem = async (req, res) => {
+	try {
+		const { items, listId } = req.body;
+		const { role: userRole } = req.payload;
 
+		if (!items || !listId) {
+			return res.status(400).json( new ServerError("Couldn't create a list item.", { origin: 'server', type: 'MissingFields' }).toFlatObject());
+		}
+
+		const list = await List.findByPk(listId, { attributes: ['id', 'isAssembled'], raw: true });
+		
+		if (!list) {
+			return res.status(404).json( new ServerError("Couldnt add list items, list not found.", { origin: 'server', type: 'ResourceNotFound' }).toFlatObject());
+		}
+		if (!list.isAssembled && userRole !== 'admin') {
+			return res.status(403).json( new ServerError("This user is not allowed to modify the list.", { origin: 'server', type: 'PermissionDenied' }).toFlatObject());
+		}
+
+		const newItems = await ListItem.bulkCreate(items.map(item => ({
+			product: item.productId,
+			amount: item.amount,
+			list: listId,
+		})));
+
+		return res.status(201).json({ message: "Products added successfully to the list." })
+	} catch(error) {
+		if (error?.name.includes('Sequelize')) {
+			return await sequelizeErrorManagement(req, res, error);
+		}
+
+		return res.status(500).json( new ServerError(
+			"Couldn't add products to the list.",
+			{
+				origin: 'unknown',
+				type: 'Unknown',
+			}
+		).toFlatObject());
+	}
 }
 
 export const removeListItem = async (req, res) => {
