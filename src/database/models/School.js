@@ -44,7 +44,7 @@ School.init(
 				}
 			},
 		},
-	}, { sequelize: database }
+	}, { sequelize: database, paranoid: true }
 );
 
 export default School;

@@ -37,41 +37,45 @@ export const createRealtionships = () => {
 
 	Course.hasMany(List, {
 		foreignKey: 'course',
+		onDelete: 'SET NULL',
 	});
 	List.belongsTo(Course, {
 		foreignKey: 'course',
+		onDelete: 'SET NULL',
 	});
 
 	School.hasMany(List, {
 		foreignKey: 'school',
-		onDelete: 'CASCADE',
+		onDelete: 'SET NULL',
 	});
 	List.belongsTo(School, {
 		foreignKey: 'school',
-		onDelete: 'CASCADE',
+		onDelete: 'SET NULL',
 	});
 
 	List.hasMany(ListItem, {
 		foreignKey: 'list',
-		onDelete: 'CASCADE',
 	});
 	ListItem.belongsTo(List, {
 		foreignKey: 'list',
-		onDelete: 'CASCADE',
 	});
 
 	Product.hasMany(ListItem, {
 		foreignKey: 'product',
+		onDelete: 'RESTRICT'
 	});
 	ListItem.belongsTo(Product, {
 		foreignKey: 'product',
+		onDelete: 'RESTRICT'
 	});
 
 	Product.hasMany(OrderItem, {
 		foreignKey: 'product',
+		onDelete: 'RESTRICT'
 	});
 	OrderItem.belongsTo(Product, {
 		foreignKey: 'product',
+		onDelete: 'RESTRICT'
 	});
 
 	Order.hasMany(OrderItem, {
@@ -83,9 +87,11 @@ export const createRealtionships = () => {
 	
 	List.hasMany(OrderItem, {
 		foreignKey: 'list',
+		onDelete: 'RESTRICT'
 	});
 	OrderItem.belongsTo(List, {
 		foreignKey: 'list',
+		onDelete: 'RESTRICT'
 	});
 
 	List.hasMany(CartItem, {
@@ -104,18 +110,19 @@ export const createRealtionships = () => {
 
 	Cart.hasMany(CartItem, {
 		foreignKey: 'cart',
-		onDelete: 'CASCADE',
+
 	});
 	CartItem.belongsTo(Cart, {
 		foreignKey: 'cart',
-		onDelete: 'CASCADE',
 	});
 
 	Category.hasMany(Product, {
 		foreignKey: 'category',
+		onDelete: 'SET NULL'
 	});
 	Product.belongsTo(Category, {
 		foreignKey: 'category',
+		onDelete: 'SET NULL'
 	});
 
 	User.hasOne(Cart, {
@@ -127,16 +134,20 @@ export const createRealtionships = () => {
 
 	User.hasMany(Order, {
 		foreignKey: 'user',
+		onDelete: 'RESTRICT'
 	});
 	Order.belongsTo(User, {
 		foreignKey: 'user',
+		onDelete: 'RESTRICT'
 	});
 
 	User.hasMany(List, {
 		foreignKey: 'user',
+		onDelete: 'SET NULL'
 	});
 	List.belongsTo(User, {
 		foreignKey: 'user',
+		onDelete: 'SET NULL'
 	});
 };
 
@@ -158,6 +169,7 @@ export const syncDBConnection = async () => {
 				role: 'admin',
 				verified: true,
 			});
+			
 			await Cart.create({
 				user: 1,
 				totalPrice: 0.0,
@@ -165,7 +177,7 @@ export const syncDBConnection = async () => {
 			await Category.create({
 				uiName: 'Colores',
 			});
-			await Product.create(
+			await Product.bulkCreate([
 				{
 					name: 'Faber Castelle 25 u',
 					stock: 340,
@@ -173,8 +185,7 @@ export const syncDBConnection = async () => {
 					offerPrice: 4500,
 					description: 'Caja de colores Faber Castelle con 25 unidades.',
 					category: 1,
-			});
-			await Product.create(
+				},
 				{
 					name: 'Hojas Gloria',
 					stock: 500,
@@ -183,9 +194,6 @@ export const syncDBConnection = async () => {
 					description: 'Posole',
 					category: 1,
 				},
-			);
-
-			await Product.create(
 				{
 					name: 'Holanda',
 					stock: 34,
@@ -194,7 +202,45 @@ export const syncDBConnection = async () => {
 					description: 'Example',
 					category: 1,
 				},
-			);
+				{
+					name: 'Lápiz HB',
+					stock: 200,
+					basePrice: 500,
+					offerPrice: 400,
+					description: 'Lápiz de grafito HB.',
+					category: 1,
+				},
+				{
+					name: 'Cuaderno A4',
+					stock: 150,
+					basePrice: 1200,
+					offerPrice: null,
+					description: 'Cuaderno rayado A4.',
+					category: 1,
+				},
+			]);
+			await School.bulkCreate([
+				{
+					name: 'Escuela Primaria N°1',
+					cue: '1234567',
+				},
+				{
+					name: 'Escuela Secundaria N°2',
+					cue: '2345678',
+				},
+				{
+					name: 'Instituto Educativo N°3',
+					cue: '3456789',
+				},
+				{
+					name: 'Colegio Privado N°4',
+					cue: '4567890',
+				},
+				{
+					name: 'Escuela Técnica N°5',
+					cue: '5678901',
+				},
+			], { ignoreDuplicates: true });
 			//Hasta acá es lo de temporal.
 			await Grade.bulkCreate([
 				{ number: 1 },

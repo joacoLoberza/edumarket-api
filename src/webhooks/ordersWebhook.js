@@ -3,7 +3,12 @@ import { Payment } from "mercadopago";
 import * as crypto from 'crypto';
 
 const ordersWebhook = (req, res) => {
-	try {
+	console.log("\x1b[36m Request", new Date().toLocaleString('sv-SE', {timeZone: 'America/Argentina/Buenos_Aires', hour12: false}),'\x1b[0m');
+	console.log("\x1b[36m ---BODY--- \x1b[0m\n",req.body, "\n");
+	console.log("\x1b[36m ---HEADERS--- \x1b[0m\n",req.headers, "\n\n");
+	return res.status(200).json('OK');
+	/* try {
+		console.log('\x1b[36m PAYMENT ', new Date().toLocaleString('sv-SE', {timeZone: 'America/Argentina/Buenos_Aires', hour12: false}),'\x1b[0m')
 		console.log(req.body)
 		console.log(req.headers)
 		//Look for the payment id and authentication headers.
@@ -59,7 +64,7 @@ const ordersWebhook = (req, res) => {
 	} catch(error) {
 		console.log(error)
 		return res.status(200).json("LLEgó con error");
-	}
+	} */
 }
 
 export default ordersWebhook;

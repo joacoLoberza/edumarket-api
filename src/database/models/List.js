@@ -15,9 +15,11 @@ List.init(
 		},
 		name: {
 			type: DataTypes.STRING,
+			unique: 'name-user',
 		},
 		school: {
 			type: DataTypes.INTEGER,
+			unique: 'school-course',
 			references: {
 				model: School,
 				key: 'id',
@@ -37,6 +39,7 @@ List.init(
 		},
 		course: {
 			type: DataTypes.INTEGER,
+			unique: 'school-course',
 			references: {
 				model: Course,
 				key: 'id',
@@ -56,6 +59,7 @@ List.init(
 		},
 		user: {
 			type: DataTypes.INTEGER,
+			unique: 'name-user',
 			references: {
 				model: User,
 				key: 'id',
@@ -65,7 +69,7 @@ List.init(
 			type: DataTypes.BOOLEAN,
 			allowNull: false,
 		}
-	}, { sequelize: database }
+	}, { sequelize: database, paranoid: true }
 )
 
 List.beforeCreate((list) => {

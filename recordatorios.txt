@@ -1,4 +1,0 @@
-				_. Crear seeds y migracioenes.
-(MUY IMPORATNTE)_. QUITAR EL FORCE DE sequelize.sync().
-(MUY IMPORATNTE)_. Agregar configuraciones de pago en los productos y modificar la creación de la preferencia al crear la orden.
-				_. Completar el webhook. El de pago aprovado tiene que descontar el stock y eliminar los items del carrito en una tensaccion.

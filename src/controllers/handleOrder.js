@@ -322,7 +322,7 @@ export const createOrder = async (req, res) => {
 
 		//Close successfully the transaction.
 		await orderTrans.commit();
-
+		console.log(preference)
 		res.status(201).json({ 
 			message: "Order created successfully.",
 			init_point: preference.init_point,

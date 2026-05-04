@@ -10,6 +10,7 @@ import categoryRouter from './routers/categoryRouter.js';
 import courseRouter from './routers/courseRouter.js';
 import schoolRouter from './routers/schoolRouter.js';
 import orderRouter from './routers/orderRouter.js';
+import listRouter from './routers/listRouter.js';
 import jwtVerify from './middlewares/jwtVerification.js';
 import verificationBarrer from './middlewares/verificationBarrer.js';
 
@@ -31,6 +32,7 @@ app.use('/category', categoryRouter);
 app.use('/course', courseRouter);
 app.use('/school', schoolRouter);
 app.use('/order', jwtVerify, verificationBarrer, orderRouter);
+app.use('/list', listRouter);
 
 const startServer = async () => {
 	createRealtionships();

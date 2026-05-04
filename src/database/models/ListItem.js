@@ -14,6 +14,7 @@ ListItem.init(
 		product: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
+			unique: 'product-list',
 			references: {
 				model: Product,
 				key: 'id',
@@ -25,6 +26,7 @@ ListItem.init(
 		list: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
+			unique: 'product-list',
 			references: {
 				model: List,
 				key: 'id',
