@@ -13,9 +13,9 @@ listRouter.post('/:id/item', jwtVerify, verificationBarrer, addListItem);
 listRouter.delete('/item/:id', jwtVerify, verificationBarrer, removeListItem);
 listRouter.patch('/item/:id', jwtVerify, verificationBarrer, changeAmount);
 
-function optionalLogin (req, res, next) {
+async function optionalLogin (req, res, next) {
 	if (req.query.isAssembled === 'true') {
-		return jwtVerify(req, res, next);
+		return await jwtVerify(req, res, next);
 	} else {
 		return next();
 	}

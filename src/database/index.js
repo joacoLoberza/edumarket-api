@@ -219,6 +219,11 @@ export const syncDBConnection = async () => {
 					category: 1,
 				},
 			]);
+						await CartItem.create({
+				product:1,
+				amount: 1,
+				cart: 1,
+			})
 			await School.bulkCreate([
 				{
 					name: 'Escuela Primaria N°1',

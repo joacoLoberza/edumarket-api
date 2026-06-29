@@ -11,6 +11,7 @@ import courseRouter from './routers/courseRouter.js';
 import schoolRouter from './routers/schoolRouter.js';
 import orderRouter from './routers/orderRouter.js';
 import listRouter from './routers/listRouter.js';
+import productsRouter from './routers/productRouter.js';
 import jwtVerify from './middlewares/jwtVerification.js';
 import verificationBarrer from './middlewares/verificationBarrer.js';
 
@@ -21,7 +22,8 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(cors({
-	origin : process.env.CLIENT_URL || "http://localhost"
+	origin : process.env.CLIENT_URL || "http://localhost:5173",
+	credentials: true,
 }));
 
 app.use('/webhooks/mp', ordersWebhook);
@@ -33,6 +35,7 @@ app.use('/course', courseRouter);
 app.use('/school', schoolRouter);
 app.use('/order', jwtVerify, verificationBarrer, orderRouter);
 app.use('/list', listRouter);
+app.use('/product', productsRouter);
 
 const startServer = async () => {
 	createRealtionships();

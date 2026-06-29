@@ -294,7 +294,7 @@ export const createOrder = async (req, res) => {
 		const preference = await preferenceInstance.create({
 			body: {
 				items: preferenceItems,
-				notification_url: /* process.env.API_URL + '/webhooks/mp' ||  */'https://entering-gathering-raking.ngrok-free.dev/webhooks/mp',
+				/* notification_url: process.env.API_URL + '/webhooks/mp' ||  'https://entering-gathering-raking.ngrok-free.dev/webhooks/mp', */
 				back_urls: {
 					success: process.env.CLIENT_URL + '/payment/success' || 'http://localhost:5173/payment/success',
 					failure: process.env.CLIENT_URL + '/payment/failure' || 'http://localhost:5173/payment/failure',
@@ -322,7 +322,7 @@ export const createOrder = async (req, res) => {
 
 		//Close successfully the transaction.
 		await orderTrans.commit();
-		console.log(preference)
+		
 		res.status(201).json({ 
 			message: "Order created successfully.",
 			init_point: preference.init_point,

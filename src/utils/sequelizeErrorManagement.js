@@ -60,13 +60,12 @@ const sequelizeErrorManagement = async (req, res, error, options) => {
 				await timeout.callback(req, res, error)
 			} else {
 				const code = timeout?.code? timeout.code : 503;
-				const message = timeout?.message? timeout.message : "The database is overloaded, so the query cannot be procesed.";
+				const message = timeout?.message? timeout.message : "Tere is a overload, so the query cannot be procesed.";
 				const type = timeout?.options?.type? timeout.type : 'Overloaded';
 
 				return res.status(code).json( new ServerError(
 					message,
 					{
-						origin,
 						type,
 					}
 				).toFlatObject());
@@ -79,7 +78,7 @@ const sequelizeErrorManagement = async (req, res, error, options) => {
 				await queryError.callback(req, res, error)
 			} else {
 				const code = queryError?.code? queryError.code : 500;
-				const message = queryError?.message? queryError.message : "Cannot proceed whit the request, there are errors in the databae query.";
+				const message = queryError?.message? queryError.message : "Cannot proceed, query innadmisible.";
 				const type = queryError?.options.type? queryError.type : 'Query';
 
 				return res.status(code).json( new ServerError(
@@ -93,9 +92,8 @@ const sequelizeErrorManagement = async (req, res, error, options) => {
 			break;
 		default:
 			return res.status(500).json(  new ServerError (
-						`Unknown database error.`,
+						`Unknown internal error.`,
 						{
-							origin: 'sequelize',
 							type: 'Unknown'
 						}
 					).toFlatObject());

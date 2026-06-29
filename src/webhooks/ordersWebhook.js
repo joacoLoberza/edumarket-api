@@ -1,30 +1,33 @@
 import mpClient from '../config/mpClient.js';
 import { Payment } from "mercadopago";
 import * as crypto from 'crypto';
+import Order from '../database/models/Order.js';
+import Product from '../database/models/Product.js';
+import OrderItem	from '../database/models/OrderItem.js';
+import List from '../database/models/List.js';
+import ListItem from '../database/models/ListItem.js';
 
-const ordersWebhook = (req, res) => {
+const ordersWebhook = async (req, res) => {
 	console.log("\x1b[36m Request", new Date().toLocaleString('sv-SE', {timeZone: 'America/Argentina/Buenos_Aires', hour12: false}),'\x1b[0m');
 	console.log("\x1b[36m ---BODY--- \x1b[0m\n",req.body, "\n");
 	console.log("\x1b[36m ---HEADERS--- \x1b[0m\n",req.headers, "\n\n");
-	return res.status(200).json('OK');
-	/* try {
-		console.log('\x1b[36m PAYMENT ', new Date().toLocaleString('sv-SE', {timeZone: 'America/Argentina/Buenos_Aires', hour12: false}),'\x1b[0m')
-		console.log(req.body)
-		console.log(req.headers)
+
+
+
+	try {
 		//Look for the payment id and authentication headers.
-		const {id:paymentId} = req.body?.data;
-		if (!paymentId) {
-			return res.status(400).json("Error processing the payment.");
-		}
+		const paymentId = req.body?.data?.id;
+		console.log(req.query, paymentId);
+		const queryId = req.query['data.id'];
 
 		const xSignature = req.headers?.["x-signature"];
 		const xRequestId = req.headers?.["x-request-id"];
 
 		if (!xSignature || !xRequestId) {
-			return res.status(401).json("Error processing the payment.");
+			return res.status(401).json("Request origin not authorized.");
 		}
 
-		//Validate request orifgin with header's signature.
+		//Validate request origin with header's signature.
 		const signatureParts = xSignature.split(',');
 		let timestamp = null;
 		let hash = null;
@@ -35,36 +38,82 @@ const ordersWebhook = (req, res) => {
 			if (key === 'v1') hash = value;
 		})
 		
-			//Create the true and expected signature.
-		const manifest = `id:${paymentId};request-id:${xRequestId};ts:${timestamp}`;
+		//Create the true and expected signature.
+		const manifest = `id:${queryId};request-id:${xRequestId};ts:${timestamp};`;
+		console.log(manifest);
+		console.log(process.env.NOTIF_SECRET_KEY);
 		const verifHash = crypto
-			.createHmac('sha256', process.env.MP_ACCESS_TOKEN)
+			.createHmac('sha256', process.env.NOTIF_SECRET_KEY)
 			.update(manifest)
 			.digest('hex');
 
+		console.log("El hash aramado: ",verifHash, "\n El hash original: ", hash);
 			//Check if the recibed signature and expected signature are equals.
 		if (hash !== verifHash) {
-			return res.status(401).json("Unauthorized to change payment data.")
+			console.log("Está mal.")
+			//return res.status(401).json("Unauthorized to change payment data.")
 		}
 
-		//Instance the paymend and obtain data.
+		/* //Instance the paymend and obtain data.
 		const payment = new Payment(mpClient);
-		const paymentInfo = Payment.get({ id: paymentId })
+		const paymentInfo = await payment.get({ id: paymentId });
+		const orderId = paymentInfo.external_reference;
 
 		if (paymentInfo.status === 'approved') {
-			console.log("\x1b[36mPAGO APROVADO\x1b[0m");
+			console.log('_________________APROVADO_________________')
+			const order = await Order.findByPk(orderId, {
+				attributes: ['id'],
+				include: {
+					model: OrderItem,
+					attributes: [ 'id', 'amount' ],
+					include: [
+						{
+							model: Product,
+							attributes: [ 'id' ],
+						},
+						{
+							model: List,
+							attributes: [ 'id' ],
+							include: {
+								model: ListItem,
+								attributes: [ 'id', 'amount' ],
+								include: {
+									model: Product,
+									attributes: [ 'id' ]
+								},
+							},
+						},
+					],
+				}
+			});
+
+			for (oItem of order.OrderItem) {
+				if (oItem.Product) {
+					await oItem.Product.decrement('stock', { by: oItem.amount });
+				} else if (oItem.List) {
+					for (lItem of oItem.List.ListItems) {
+						await lItem.Product.decrement('stock', { by: lItem.amount*oItem.amount});
+					}
+				}
+			}
+
+			await order.update({
+				status: 'paid',
+			});
+
+			
 		} else if (paymentInfo.status === 'rejected') {
 			console.log("\x1b[36mPAGO FALLIDO\x1b[0m");
 		} else {
 			console.log("\x1b[36mALGO PASO\x1b[0m");
-		}
+		} */
 
-		return res.status(200).json("LLEGO bien (?)");
+		return res.status(200).json("OK");
 
 	} catch(error) {
 		console.log(error)
-		return res.status(200).json("LLEgó con error");
-	} */
+		return res.status(200).json("OK");
+	}
 }
 
 export default ordersWebhook;

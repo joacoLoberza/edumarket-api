@@ -116,7 +116,7 @@ export const userLogin = async (req, res) => {
 
 		if (!user) {
 			const srvErr = new ServerError(
-				`Can't find the user in the model User.`,
+				`Can't find the user in the model.`,
 				{
 					type: 'ResourceNotFound',
 					origin: 'server',
@@ -379,7 +379,6 @@ export const userRegister = async (req, res) => {
 					console.error(`Server|\x1b[31m Error \x1b[1mcleaning a expired unverified accounts\x1b[22m in its scheduled function.\x1b[0m`)
 				}
 			}
-			console.log('\x1b[36mELIMINADO\x1b[36m')
 		}, exp * 1000 - Date.now());
 
 		//Send verification e-mail to the user.
@@ -831,7 +830,7 @@ export const userUpdate = async (req, res) => {
 				}
 			).toFlatObject() );
 		}
-		console.log(user.verified)
+
 		//Update user data.
 		if (!toUser) {
 			//The fields in this scope wouldn't be cahnged by someone other than the own user.
